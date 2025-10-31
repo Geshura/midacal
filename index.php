@@ -41,10 +41,6 @@ body.dark .event-item { border-color: #444; }
 .navbar button:hover { background:#1669c1; }
 
 /* --- Widok przełączania miesiąc/tydzień --- */
-.view-toggle { display:flex; justify-content:center; gap:10px; margin-bottom:15px; }
-.view-toggle button { padding:5px 12px; border:none; border-radius:5px; cursor:pointer; background:#e0e0e0; transition:background 0.2s; }
-.view-toggle button.active { background:#1a73e8; color:white; }
-.view-toggle button:hover:not(.active) { background:#cfcfcf; }
 
 /* --- Kontener kalendarza --- */
 .calendar {
