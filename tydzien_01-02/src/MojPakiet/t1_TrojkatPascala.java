@@ -45,3 +45,15 @@ public class t1_TrojkatPascala {
 		trojkatPascalaRekurencyjnie(liczbaN);
 	}
 }
+sda
+fsda
+fsd
+afsda
+fsda
+fsda
+fsad
+fasd
+fsad
+fsad
+fsa
+
