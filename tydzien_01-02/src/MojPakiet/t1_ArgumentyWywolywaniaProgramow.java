@@ -5,7 +5,7 @@ public class t1_ArgumentyWywolywaniaProgramow {
 	public static void main(String[] args) {
 		System.out.println("1. Drukowanie pierwszego argumentu wywołania");
 		System.out.println(args[0]);
-//test
+
 		System.out.println("2. Drukowanie DRUGIEGO i TRZECIEGO argumentu wywołania");
 		System.out.println(args[1]+" | "+args[2]);
 
