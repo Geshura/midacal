@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <session version="1.0">
+<<<<<<< HEAD
 <refactoring accessors="true" comment="Delete element from project &apos;tydzien_0102&apos;&#x0D;&#x0A;- Original project: &apos;tydzien_0102&apos;&#x0D;&#x0A;- Original element: &apos;module-info.java&apos;" description="Delete element" element1="src/module-info.java" elements="0" flags="589830" id="org.eclipse.jdt.ui.delete" resources="1" stamp="1762099666119" subPackages="false" version="1.0"/>
+=======
+<refactoring accessors="true" comment="Delete element from project &apos;tydzien_0102&apos;&#x0D;&#x0A;- Original project: &apos;tydzien_0102&apos;&#x0D;&#x0A;- Original element: &apos;module-info.java&apos;" description="Delete element" element1="src/module-info.java" elements="0" flags="589830" id="org.eclipse.jdt.ui.delete" resources="1" stamp="1762099465445" subPackages="false" version="1.0"/>
+>>>>>>> c7e32f3dc6312957188366ef2a6eba9019189301
 </session>
