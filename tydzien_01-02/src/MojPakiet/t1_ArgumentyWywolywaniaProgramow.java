@@ -10,6 +10,7 @@ public class t1_ArgumentyWywolywaniaProgramow {
 		System.out.println("2. Drukowanie DRUGIEGO i TRZECIEGO argumentu wywo³ania");
 		System.out.println(args[1]+" | "+args[2]);
 
+		dsaasdasdasdasdadasd
 
 		System.out.println("3. Zabezpieczenie przed niew³aœciw¹ liczb¹ argumentów");
 		if (args.length <3)
@@ -22,6 +23,8 @@ public class t1_ArgumentyWywolywaniaProgramow {
 		int i;
 		for (i=0; i<args.length; i++)
 		System.out.println(args[i]);
+		
+		dsflsdaflkfdsasdalkfflsdkklsdfalkasdflksadlksdfakl
 	}
 //ssssssssssssssssssssssssssssssss
 }
