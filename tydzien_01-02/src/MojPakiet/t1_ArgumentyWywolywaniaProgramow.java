@@ -23,5 +23,5 @@ public class t1_ArgumentyWywolywaniaProgramow {
 		for (i=0; i<args.length; i++)
 		System.out.println(args[i]);
 	}
-
+//ssssssssssssssssssssssssssssssss
 }
