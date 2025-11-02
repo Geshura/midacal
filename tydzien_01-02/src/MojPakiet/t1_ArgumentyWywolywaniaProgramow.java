@@ -9,9 +9,6 @@ public class t1_ArgumentyWywolywaniaProgramow {
 		System.out.println("2. Drukowanie DRUGIEGO i TRZECIEGO argumentu wywo³ania");
 		System.out.println(args[1]+" | "+args[2]);
 
-		System.out.println("2. Drukowanie DRUGIEGO i TRZECIEGO argumentu wywo³ania");
-		System.out.println(args[1]+" | "+args[2]);
-
 		System.out.println("3. Zabezpieczenie przed niew³aœciw¹ liczb¹ argumentów");
 		if (args.length <3)
 		System.out.print("Za ma³o argumentów");
