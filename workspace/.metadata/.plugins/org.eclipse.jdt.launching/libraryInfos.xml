@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <libraryInfos>
+<<<<<<< HEAD
 <libraryInfo home="C:\Program Files\Java\jre-1.8" version="1.8.0_401">
 <bootpath>
 <entry path="C:\Program Files\Java\jre-1.8\lib\resources.jar"/>
@@ -16,6 +17,24 @@
 </extensionDirs>
 <endorsedDirs>
 <entry path="C:\Program Files\Java\jre-1.8\lib\endorsed"/>
+=======
+<libraryInfo home="C:\Program Files\Java\jre1.8.0_471" version="1.8.0_471">
+<bootpath>
+<entry path="C:\Program Files\Java\jre1.8.0_471\lib\resources.jar"/>
+<entry path="C:\Program Files\Java\jre1.8.0_471\lib\rt.jar"/>
+<entry path="C:\Program Files\Java\jre1.8.0_471\lib\jsse.jar"/>
+<entry path="C:\Program Files\Java\jre1.8.0_471\lib\jce.jar"/>
+<entry path="C:\Program Files\Java\jre1.8.0_471\lib\charsets.jar"/>
+<entry path="C:\Program Files\Java\jre1.8.0_471\lib\jfr.jar"/>
+<entry path="C:\Program Files\Java\jre1.8.0_471\classes"/>
+</bootpath>
+<extensionDirs>
+<entry path="C:\Program Files\Java\jre1.8.0_471\lib\ext"/>
+<entry path="C:\WINDOWS\Sun\Java\lib\ext"/>
+</extensionDirs>
+<endorsedDirs>
+<entry path="C:\Program Files\Java\jre1.8.0_471\lib\endorsed"/>
+>>>>>>> 0b25ae5628a7e0f25df981a4ce531e9ded3b0084
 </endorsedDirs>
 </libraryInfo>
 </libraryInfos>
