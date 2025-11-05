@@ -46,9 +46,30 @@ public class t1_SilniaDwumian {
 	    return dwumianNewtonaRekurencyjnie(n-1,k-1)+dwumianNewtonaRekurencyjnie(n-1,k);
 	}
 	
+	public static int dwumianNewtonaPrzysp(int n, int k) {
+	    if (k < 0 || k > n) {
+	        return -1;
+	    }
+	    if (k == 0 || k == n) {
+	        return 1;
+	    }
+
+	    if (k > n - k) {
+	        k = n - k;
+	    }
+
+	    int wynik = 1;
+
+	    for (int i = 1; i <= k; i++) {
+	        wynik = wynik * (n - i + 1) / i;
+	    }
+
+	    return wynik;
+	}
+	
 	public static void main(String[] args) {
-        int liczbaN = 0;
-        int liczbaK = -5;
+        int liczbaN = 8;
+        int liczbaK = 6;
         
         // SILNIA ITERACYJNA
         int wynikIteracyjny = silniaIteracyjna(liczbaN);
@@ -85,5 +106,13 @@ public class t1_SilniaDwumian {
         }else{
             System.out.println("Dwumian Newtona (Rekurencyjnie) z "+liczbaN+" to: "+wynikDwumianuRekurencyjny);
         }
+            
+         // DWUMIAN NEWTONA PRZYSPIESZONY
+         int wynikDwumianuPrzysp = dwumianNewtonaPrzysp (liczbaN, liczbaK);
+         if (wynikDwumianuPrzysp == -1){ 
+            System.out.println("Dwumian Newtona Przysp z "+liczbaN+" nie mo¿e zostaæ utworzony.");
+         }else{
+            System.out.println("Dwumian Newtona Przysp z "+liczbaN+" to: "+wynikDwumianuPrzysp);
+         }
 	}
 }
