@@ -49,6 +49,7 @@ public class ZdarzenieKlasa{
 	}
 	
 	//metoda do wyswietlania toString()
+	@Override
 	public String toString(){
 	    return "Zdarzenie {" +
 	            "nazwa='" + nazwa + '\'' +

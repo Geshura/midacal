@@ -1,7 +1,7 @@
 package midacalPakiet;
 
 import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
-import jakarta.mail.internet.InternetAddress;
+import javax.mail.internet.InternetAddress;
 
 public class KontaktKlasa{
 	private String imie;
@@ -50,6 +50,7 @@ public class KontaktKlasa{
 	}
 	
 	//metoda do wyswietlania toString()
+	@Override
 	public String toString(){
 	    return "Kontakt {" +
 	            "imie='" + imie + '\'' +
