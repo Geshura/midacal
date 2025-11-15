@@ -3,18 +3,18 @@ package midacalPakiet;
 import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
 import javax.mail.internet.InternetAddress;
 
-public class KontaktKlasa{
+public class Kontakt{
 	private String imie;
 	private String nazwisko;
 	private PhoneNumber telefon;
 	private InternetAddress email;
 
 	//konstruktor bezargumentowy
-	public KontaktKlasa(){
+	public Kontakt(){
 	}
 	
 	//konstruktor g³ówny do tworzenia obiektów
-	public KontaktKlasa(String imie, String nazwisko, PhoneNumber telefon, InternetAddress email){
+	public Kontakt(String imie, String nazwisko, PhoneNumber telefon, InternetAddress email){
 		this.imie=imie;
 		this.nazwisko=nazwisko;
 		this.telefon=telefon;

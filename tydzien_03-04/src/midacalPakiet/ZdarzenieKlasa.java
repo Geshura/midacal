@@ -2,18 +2,18 @@ package midacalPakiet;
 
 import java.time.LocalDate;
 
-public class ZdarzenieKlasa{
+public class Zdarzenie{
 	private String nazwa;
 	private LocalDate data;
 	private String miejsce;
 	private String opis;
 
 	//konstruktor bezargumentowy
-	public ZdarzenieKlasa(){
+	public Zdarzenie(){
 	}
 	
 	//konstruktor g³ówny do tworzenia obiektów
-	public ZdarzenieKlasa(String nazwa, LocalDate data, String miejsce, String opis){
+	public Zdarzenie(String nazwa, LocalDate data, String miejsce, String opis){
 		this.nazwa=nazwa;
 		this.data=data;
 		this.miejsce=miejsce;
