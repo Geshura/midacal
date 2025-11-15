@@ -14,7 +14,7 @@ public class t1_TrojkatPascala {
 	        for (int j = 0; j <= i; j++) {
 	            System.out.print(tab[j] + " ");
 	        }
-	        System.out.println();
+	        System.out.println();//sssssssssssssssssssssssssssssssssssssssssssss
 	    }
 	}
 	public static void trojkatPascalaRekurencyjnie(int n){
