@@ -2,21 +2,22 @@ package MojPakiet;
 
 public class t1_TrojkatPascala {
 	
-	public static void trojkatPascalaIteracyjnie(int n) {
-	    long[] tab = new long[n];
-	    tab[0] = 1;
-
-	    for (int i = 0; i < n; i++) {
-	        for (int j = i; j > 0; j--) {
-	            tab[j] = tab[j] + tab[j - 1];
-	        }
-
-	        for (int j = 0; j <= i; j++) {
-	            System.out.print(tab[j] + " ");
-	        }
-	        System.out.println();
-	    }
+	public static void trojkatPascalaIteracyjnie(int n){
+		long tab[][] = new long[n][n];
+		for (int j=0; j<n; j++)
+		{
+		    tab[j][0]=1;
+		    tab[j][j]=1;
+		    
+		    for (int i=0; i<j; i++){
+		        tab[j][i+1]=tab[j-1][i]+tab[j-1][i+1];
+		        System.out.print(tab[j][i] + " ");
+		    }
+		    System.out.print(tab[j][j] + " ");
+		    System.out.println();
+		}
 	}
+	
 	public static void trojkatPascalaRekurencyjnie(int n){
 		for (int wiersz=0;wiersz<n;wiersz++){
 			for (int pozycja=0;pozycja<=wiersz;pozycja++){
