@@ -1,0 +1,87 @@
+### ## 1. Faza: Podstawowe Klasy (Model Danych)
+
+* [x] **Dla `Kontakt`:**
+    * [x] Upewnij sie, ze wszystkie pola sa `private`.
+    * [x] Upewnij sie, ze masz konstruktor bezargumentowy.
+    * [x] Upewnij sie, ze masz konstruktor glowny.
+    * [x] Upewnij sie, ze masz metody `get` i `set` dla *kazdego* pola.
+    * [x] Upewnij sie, ze masz metode `toString()`.
+
+* [x] **Dla `Zdarzenie`:**
+    * [x] Upewnij sie, ze wszystkie pola sa `private`.
+    * [x] Upewnij sie, ze masz konstruktor bezargumentowy.
+    * [x] Upewnij sie, ze masz konstruktor glowny.
+    * [x] Upewnij sie, ze masz metody `get` i `set` dla *kazdego* pola.
+    * [x] Upewnij sie, ze masz metode `toString()`.
+
+---
+
+### ## 2. Faza: Sortowanie Domyslne (Comparable)
+
+* [ ] **Aktualizuj `Kontakt`:**
+    * [ ] W definicji klasy dodaj: `implements Comparable<Kontakt>`.
+    * [ ] Zaimplementuj metode `compareTo(Kontakt other)`.
+    * [ ] **Logika:** Niech porownuje nazwiska (np. `this.getNazwisko().compareTo(other.getNazwisko())`).
+
+* [ ] **Aktualizuj `Zdarzenie`:**
+    * [ ] W definicji klasy dodaj: `implements Comparable<Zdarzenie>`.
+    * [ ] Zaimplementuj metode `compareTo(Zdarzenie other)`.
+    * [ ] **Logika:** Niech porownuje daty (np. `this.getData().compareTo(other.getData())`).
+
+---
+
+### ## 3. Faza: Sortowanie Niestandardowe (Comparator)
+
+* [ ] **Stworz nowy plik `SortujKontaktyPoEmailu.java`:**
+    * [ ] Utworz klase `public class SortujKontaktyPoEmailu implements Comparator<Kontakt>`.
+    * [ ] Zaimplementuj metode `compare(Kontakt k1, Kontakt k2)`.
+    * [ ] **Logika:** Niech porownuje e-maile.
+
+* [ ] **Stworz nowy plik `SortujZdarzeniaPoNazwie.java`:**
+    * [ ] Utworz klase `public class SortujZdarzeniaPoNazwie implements Comparator<Zdarzenie>`.
+    * [ ] Zaimplementuj metode `compare(Zdarzenie z1, Zdarzenie z2)`.
+    * [ ] **Logika:** Niech porownuje nazwy.
+
+---
+
+### ## 4. Faza: Glowna Aplikacja (Testowanie)
+
+* [ ] **W `MainKlasa.java`:**
+    * [x] Stworz `ArrayList` dla kontaktow i zdarzen (pamietaj o `new ArrayList<Typ>()` dla Javy 1.6).
+    * [x] Wypelnij listy 10 kontaktami i 10 zdarzeniami.
+    * [ ] **Pokaz Edycje:** Edytuj jeden rekord (np. `ListaKontakty.get(0).setImie(...)`).
+    * [ ] **Pokaz Usuwanie:** Usun jeden rekord (np. `ListaZdarzenia.remove(1)`).
+    * [ ] **Pokaz Sortowanie Domyslne (Comparable):**
+        * [ ] Dodaj `import java.util.Collections;`.
+        * [ ] Wywolaj `Collections.sort(ListaKontakty);`.
+        * [ ] Wywolaj `Collections.sort(ListaZdarzenia);`.
+        * [ ] Wyswietl posortowane listy.
+    * [ ] **Pokaz Sortowanie Niestandardowe (Comparator):**
+        * [ ] Wywolaj `Collections.sort(ListaKontakty, new SortujKontaktyPoEmailu());`.
+        * [ ] Wywolaj `Collections.sort(ListaZdarzenia, new SortujZdarzeniaPoNazwie());`.
+        * [ ] Wyswietl posortowane listy.
+
+---
+
+### ## 5. Faza: Zapis i Odczyt (XML)
+
+* [ ] **Dodaj importy** na gorze `MainKlasa.java`:
+    * [ ] `import java.beans.XMLEncoder;`
+    * [ ] `import java.beans.XMLDecoder;`
+    * [ ] `import java.io.FileOutputStream;`
+    * [ ] `import java.io.FileInputStream;`
+    * [ ] `import java.io.IOException;`
+
+* [ ] **W `MainKlasa.java` (na koncu `main`) dodaj zapis:**
+    * [ ] Uzyj `try-catch` do obslugi `IOException`.
+    * [ ] Utworz `XMLEncoder` wskazujacy na plik (np. `kalendarz.xml`).
+    * [ ] Uzyj `encoder.writeObject(ListaKontakty);`.
+    * [ ] Uzyj `encoder.writeObject(ListaZdarzenia);`.
+    * [ ] Zamknij enkoder.
+
+* [ ] **W `MainKlasa.java` (na koncu `main`) dodaj odczyt:**
+    * [ ] Utworz `XMLDecoder` wskazujacy na ten sam plik.
+    * [ ] Odczytaj obiekty: `List<Kontakt> wczytaneKontakty = (List<Kontakt>) decoder.readObject();`.
+    * [ ] Odczytaj obiekty: `List<Zdarzenie> wczytaneZdarzenia = (List<Zdarzenie>) decoder.readObject();`.
+    * [ ] Zamknij dekoder.
+    * [ ] Wyswietl wczytane listy, aby udowodnic, ze odczyt sie udal.
