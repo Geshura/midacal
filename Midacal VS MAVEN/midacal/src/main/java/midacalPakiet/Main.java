@@ -33,8 +33,8 @@ public class Main {
         } else {
             System.out.println("Nie udalo sie wczytac danych z pliku. Tworzenie nowych danych...");
             //tworzenie listy zdarzen i kontaktow za pomoca ArrayList
-            listaZdarzen = new ArrayList<Zdarzenie>();
-            listaKontaktow = new ArrayList<Kontakt>();
+            listaZdarzen = new ArrayList<>();
+            listaKontaktow = new ArrayList<>();
             stworzDomyslneDane(listaZdarzen, listaKontaktow);
             zapiszDaneDoXML(listaZdarzen, listaKontaktow);
         }
