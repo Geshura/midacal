@@ -7,19 +7,24 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
+import java.util.ArrayList;
+import java.util.List;
 
 @XmlRootElement(name = "kontakt")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class Kontakt implements Comparable<Kontakt>{
+    private int id;
 	private String imie;
 	private String nazwisko;
     @XmlJavaTypeAdapter(value = AdapterPhone.class)
 	private PhoneNumber telefon;
     @XmlJavaTypeAdapter(value = AdapterEmail.class)
 	private InternetAddress email;
+	private List<Zdarzenie> zdarzenia;
 
 	//konstruktor bezargumentowy
 	public Kontakt(){
+		this.zdarzenia = new ArrayList<>();
 	}
 	
 	//konstruktor glowny do tworzenia obiektow
@@ -31,6 +36,7 @@ public class Kontakt implements Comparable<Kontakt>{
 			email.validate();
 		}
 		this.email=email;
+		this.zdarzenia = new ArrayList<>();
 	}
 	
 	//metody do zapisu set
@@ -49,6 +55,14 @@ public class Kontakt implements Comparable<Kontakt>{
 		}
 		this.email=email;
 	}
+
+	public int getId(){
+		return id;
+	}
+
+	public void setId(int id){
+		this.id = id;
+	}
 	
 	//metody do odczytu get
 	public String getImie(){
@@ -62,6 +76,24 @@ public class Kontakt implements Comparable<Kontakt>{
 	}
 	public InternetAddress getEmail(){
 		return email;
+	}
+
+	public List<Zdarzenie> getZdarzenia(){
+		return zdarzenia;
+	}
+
+	public void setZdarzenia(List<Zdarzenie> zdarzenia){
+		this.zdarzenia = zdarzenia;
+	}
+
+	public void addZdarzenie(Zdarzenie zdarzenie){
+		if (!this.zdarzenia.contains(zdarzenie)) {
+			this.zdarzenia.add(zdarzenie);
+		}
+	}
+
+	public void removeZdarzenie(Zdarzenie zdarzenie){
+		this.zdarzenia.remove(zdarzenie);
 	}
 
 	//metoda CompareTo (interfejs Comparable) do porownywania kontaktu po domyslnym atrybucie nazwisko

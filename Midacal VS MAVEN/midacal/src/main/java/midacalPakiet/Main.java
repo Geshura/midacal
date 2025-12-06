@@ -19,25 +19,74 @@ import com.google.i18n.phonenumbers.PhoneNumberUtil;
 public class Main {
 
     private static final String DATA_FILE_PATH = "kalendarz.xml";
+    private static int xmlSaveCounter = 0;
+    private static final int BACKUP_INTERVAL = 10; // liczba zapisow XML przed backupem do DB
 
     public static void main(String[] args) {
-        List<Zdarzenie> listaZdarzen;
-        List<Kontakt> listaKontaktow;
+        final List<Zdarzenie> listaZdarzen = new ArrayList<>();
+        final List<Kontakt> listaKontaktow = new ArrayList<>();
 
         KalendarzDane wrapper = wczytajDaneZXML();
 
         if (wrapper != null && wrapper.getZdarzenia() != null && wrapper.getKontakty() != null) {
-            listaZdarzen = wrapper.getZdarzenia();
-            listaKontaktow = wrapper.getKontakty();
+            listaZdarzen.addAll(wrapper.getZdarzenia());
+            listaKontaktow.addAll(wrapper.getKontakty());
             System.out.println("Pomyslnie wczytano dane z pliku " + DATA_FILE_PATH);
         } else {
             System.out.println("Nie udalo sie wczytac danych z pliku. Tworzenie nowych danych...");
             //tworzenie listy zdarzen i kontaktow za pomoca ArrayList
-            listaZdarzen = new ArrayList<Zdarzenie>();
-            listaKontaktow = new ArrayList<Kontakt>();
             stworzDomyslneDane(listaZdarzen, listaKontaktow);
             zapiszDaneDoXML(listaZdarzen, listaKontaktow);
         }
+
+        // Inicjalizacja bazy danych SQLite
+        DBHelper.initDatabase();
+
+        // Spróbuj wczytać dane z bazy. Jeśli baza ma dane, użyj ich (wraz z relacjami).
+        List<Kontakt> dbKontakty = DBHelper.getAllKontakty();
+        List<Zdarzenie> dbZdarzenia = DBHelper.getAllZdarzenia();
+        if ((dbKontakty != null && !dbKontakty.isEmpty()) || (dbZdarzenia != null && !dbZdarzenia.isEmpty())) {
+            // preferuj dane z bazy
+                if (dbKontakty != null && !dbKontakty.isEmpty()) {
+                    listaKontaktow.clear();
+                    listaKontaktow.addAll(dbKontakty);
+                }
+                if (dbZdarzenia != null && !dbZdarzenia.isEmpty()) {
+                    listaZdarzen.clear();
+                    listaZdarzen.addAll(dbZdarzenia);
+                }
+
+            // wczytaj relacje mnogie
+            for (Kontakt k : listaKontaktow) {
+                if (k.getId() > 0) {
+                    List<Zdarzenie> rel = DBHelper.getZdarzeniaForKontakt(k.getId());
+                    k.setZdarzenia(rel);
+                }
+            }
+            for (Zdarzenie z : listaZdarzen) {
+                if (z.getId() > 0) {
+                    List<Kontakt> relk = DBHelper.getKontaktyForZdarzenie(z.getId());
+                    z.setKontakty(relk);
+                }
+            }
+            System.out.println("Wczytano dane z bazy danych zamiast XML");
+        } else {
+            // brak danych w bazie -> wstaw domyslne dane do bazy
+            DBHelper.syncAllToDB(listaKontaktow, listaZdarzen);
+        }
+
+        DBHelper.printAllKontakty();
+        DBHelper.printAllZdarzenia();
+
+        // Dodaj hook wyjscia, aby zapisac aktualne dane do bazy przy zamknieciu aplikacji
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                System.out.println("Shutdown hook: synchronizacja danych do bazy...");
+                DBHelper.syncAllToDB(listaKontaktow, listaZdarzen);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }));
 
 
         //wyswietlenie utworzonych zdarzen
@@ -110,17 +159,17 @@ public class Main {
         //tworzenie obiektu PhoneNumberUtil do walidacji numerow telefonow
         PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
 
-        //dodanie 10 zdarzen do listy zdarzen
-        listaZdarzen.add(new Zdarzenie("Wakacje w Londynie", LocalDate.of(2026, 8, 10), "Londyn, UK", "Lot o 10:30, zwiedzanie muzeow."));
-        listaZdarzen.add(new Zdarzenie("Open'er Festival 2026", LocalDate.of(2026, 7, 1), "Gdynia-Kosakowo", "Karnet 4-dniowy, spotkanie z ekipa."));
-        listaZdarzen.add(new Zdarzenie("Roast Gimpera", LocalDate.of(2026, 1, 25), "Warszawa, Stodola", "Bilety kupione, rzad 10."));
-        listaZdarzen.add(new Zdarzenie("Stand-up: Mateusz Socha", LocalDate.of(2026, 3, 14), "Torun, CKK Jordanki", "Nowy program 'Masochista'."));
-        listaZdarzen.add(new Zdarzenie("Splyw kajakowy (Rzeka Wda)", LocalDate.of(2026, 6, 13), "Woryty (Start)", "Weekendowy splyw z namiotami."));
-        listaZdarzen.add(new Zdarzenie("Jarmark Bozonarodzeniowy", LocalDate.of(2025, 12, 14), "Wroclaw, Rynek", "Spotkanie na grzane wino."));
-        listaZdarzen.add(new Zdarzenie("Egzamin (Programowanie)", LocalDate.of(2026, 1, 29), "Uniwersytet, Sala 301", "Sesja zimowa. Powtorzyc Jave!"));
-        listaZdarzen.add(new Zdarzenie("Urodziny wujka Krzysia (50.)", LocalDate.of(2025, 11, 23), "Restauracja 'Pod Debem'", "Kupic prezent."));
-        listaZdarzen.add(new Zdarzenie("Pyrkon - Festiwal Fantastyki", LocalDate.of(2026, 6, 12), "Poznan, MTP", "Caly weekend, kupic bilet 3-dniowy."));
-        listaZdarzen.add(new Zdarzenie("Rezerwacja na tatuaz", LocalDate.of(2026, 2, 20), "Studio 'Czarny Tusz'", "Dokonczenie 'rekawa'. Sesja o 10:00."));
+        //dodanie 10 zdarzen do listy zdarzen z URL-ami na Google Maps
+        listaZdarzen.add(new Zdarzenie("Wakacje w Londynie", LocalDate.of(2026, 8, 10), "https://www.google.com/maps/search/London,+UK/@51.5074,-0.1278,13z", "Lot o 10:30, zwiedzanie muzeow."));
+        listaZdarzen.add(new Zdarzenie("Open'er Festival 2026", LocalDate.of(2026, 7, 1), "https://www.google.com/maps/search/Gdynia-Kosakowo/@54.4909,18.5841,13z", "Karnet 4-dniowy, spotkanie z ekipa."));
+        listaZdarzen.add(new Zdarzenie("Roast Gimpera", LocalDate.of(2026, 1, 25), "https://www.google.com/maps/search/Warszawa,+Stodola/@52.2297,21.0122,13z", "Bilety kupione, rzad 10."));
+        listaZdarzen.add(new Zdarzenie("Stand-up: Mateusz Socha", LocalDate.of(2026, 3, 14), "https://www.google.com/maps/search/Torun,+CKK+Jordanki/@53.0238,18.5976,13z", "Nowy program 'Masochista'."));
+        listaZdarzen.add(new Zdarzenie("Splyw kajakowy (Rzeka Wda)", LocalDate.of(2026, 6, 13), "https://www.google.com/maps/search/Woryty,+Pomeranian/@53.7050,18.5500,13z", "Weekendowy splyw z namiotami."));
+        listaZdarzen.add(new Zdarzenie("Jarmark Bozonarodzeniowy", LocalDate.of(2025, 12, 14), "https://www.google.com/maps/search/Wroclaw,+Rynek/@51.1079,17.0385,13z", "Spotkanie na grzane wino."));
+        listaZdarzen.add(new Zdarzenie("Egzamin (Programowanie)", LocalDate.of(2026, 1, 29), "https://www.google.com/maps/search/Uniwersytet/@51.1079,17.0385,13z", "Sesja zimowa. Powtorzyc Jave!"));
+        listaZdarzen.add(new Zdarzenie("Urodziny wujka Krzysia (50.)", LocalDate.of(2025, 11, 23), "https://www.google.com/maps/search/Restauracja+Pod+Debem/@52.2297,21.0122,13z", "Kupic prezent."));
+        listaZdarzen.add(new Zdarzenie("Pyrkon - Festiwal Fantastyki", LocalDate.of(2026, 6, 12), "https://www.google.com/maps/search/Poznan,+MTP/@52.4064,16.9252,13z", "Caly weekend, kupic bilet 3-dniowy."));
+        listaZdarzen.add(new Zdarzenie("Rezerwacja na tatuaz", LocalDate.of(2026, 2, 20), "https://www.google.com/maps/search/Studio+Czarny+Tusz/@52.2297,21.0122,13z", "Dokonczenie 'rekawa'. Sesja o 10:00."));
 
         //dodanie 10 kontaktow do listy kontaktow
         //sprawdzenie poprawnosci numerow telefonow i adresow e-mail
@@ -155,7 +204,18 @@ public class Main {
 
             marshaller.marshal(wrapper, new File(DATA_FILE_PATH));
             System.out.println("Pomyslnie zapisano dane do pliku " + DATA_FILE_PATH);
-
+            
+            // Inkremencja licznika zapisu XML i opcjonalny backup do bazy co BACKUP_INTERVAL zapisow
+            xmlSaveCounter++;
+            if (xmlSaveCounter >= BACKUP_INTERVAL) {
+                System.out.println("Automatyczny backup: synchronizacja danych XML do bazy danych...");
+                try {
+                    DBHelper.syncAllToDB(listaKontaktow, listaZdarzen);
+                } catch (Exception e) {
+                    System.err.println("Blad podczas backupu do DB: " + e.getMessage());
+                }
+                xmlSaveCounter = 0;
+            }
         } catch (JAXBException e) {
             System.err.println("Blad podczas zapisu danych do XML: " + e.getMessage());
             e.printStackTrace();
