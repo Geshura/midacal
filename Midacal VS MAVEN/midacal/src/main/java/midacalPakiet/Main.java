@@ -26,37 +26,23 @@ public class Main {
         final List<Zdarzenie> listaZdarzen = new ArrayList<>();
         final List<Kontakt> listaKontaktow = new ArrayList<>();
 
-        KalendarzDane wrapper = wczytajDaneZXML();
-
-        if (wrapper != null && wrapper.getZdarzenia() != null && wrapper.getKontakty() != null) {
-            listaZdarzen.addAll(wrapper.getZdarzenia());
-            listaKontaktow.addAll(wrapper.getKontakty());
-            System.out.println("Pomyslnie wczytano dane z pliku " + DATA_FILE_PATH);
-        } else {
-            System.out.println("Nie udalo sie wczytac danych z pliku. Tworzenie nowych danych...");
-            //tworzenie listy zdarzen i kontaktow za pomoca ArrayList
-            stworzDomyslneDane(listaZdarzen, listaKontaktow);
-            zapiszDaneDoXML(listaZdarzen, listaKontaktow);
-        }
-
-        // Inicjalizacja bazy danych SQLite
+        // ✅ START: Inicjalizuj bazę danych
         DBHelper.initDatabase();
 
-        // Spróbuj wczytać dane z bazy. Jeśli baza ma dane, użyj ich (wraz z relacjami).
+        // ✅ Jeśli baza ma dane → użyj je (przerywamy połączenie)
         List<Kontakt> dbKontakty = DBHelper.getAllKontakty();
         List<Zdarzenie> dbZdarzenia = DBHelper.getAllZdarzenia();
+        
         if ((dbKontakty != null && !dbKontakty.isEmpty()) || (dbZdarzenia != null && !dbZdarzenia.isEmpty())) {
-            // preferuj dane z bazy
-                if (dbKontakty != null && !dbKontakty.isEmpty()) {
-                    listaKontaktow.clear();
-                    listaKontaktow.addAll(dbKontakty);
-                }
-                if (dbZdarzenia != null && !dbZdarzenia.isEmpty()) {
-                    listaZdarzen.clear();
-                    listaZdarzen.addAll(dbZdarzenia);
-                }
+            // Baza ma dane - załaduj je
+            if (dbKontakty != null && !dbKontakty.isEmpty()) {
+                listaKontaktow.addAll(dbKontakty);
+            }
+            if (dbZdarzenia != null && !dbZdarzenia.isEmpty()) {
+                listaZdarzen.addAll(dbZdarzenia);
+            }
 
-            // wczytaj relacje mnogie
+            // Wczytaj relacje między kontaktami a zdarzeniami
             for (Kontakt k : listaKontaktow) {
                 if (k.getId() > 0) {
                     List<Zdarzenie> rel = DBHelper.getZdarzeniaForKontakt(k.getId());
@@ -69,10 +55,25 @@ public class Main {
                     z.setKontakty(relk);
                 }
             }
-            System.out.println("Wczytano dane z bazy danych zamiast XML");
+            System.out.println("Wczytano dane z bazy danych");
         } else {
-            // brak danych w bazie -> wstaw domyslne dane do bazy
-            DBHelper.syncAllToDB(listaKontaktow, listaZdarzen);
+            // Jeśli baza pusta -> wczytaj XML
+            KalendarzDane wrapper = wczytajDaneZXML();
+
+            if (wrapper != null && wrapper.getZdarzenia() != null && wrapper.getKontakty() != null) {
+                listaZdarzen.addAll(wrapper.getZdarzenia());
+                listaKontaktow.addAll(wrapper.getKontakty());
+                System.out.println("Pomyslnie wczytano dane z pliku " + DATA_FILE_PATH);
+                // Wstaw wczytane dane z XML do bazy
+                DBHelper.syncAllToDB(listaKontaktow, listaZdarzen);
+            } else {
+                // Jeśli XML pusty -> stwórz domyślne dane i zapisz do bazy
+                System.out.println("Nie udalo sie wczytac danych z pliku. Tworzenie nowych danych...");
+                stworzDomyslneDane(listaZdarzen, listaKontaktow);
+                zapiszDaneDoXML(listaZdarzen, listaKontaktow);
+                // Wstaw domyślne dane do bazy
+                DBHelper.syncAllToDB(listaKontaktow, listaZdarzen);
+            }
         }
 
         DBHelper.printAllKontakty();
@@ -81,7 +82,7 @@ public class Main {
         // Dodaj hook wyjscia, aby zapisac aktualne dane do bazy przy zamknieciu aplikacji
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
-                System.out.println("Shutdown hook: synchronizacja danych do bazy...");
+                System.out.println("\nZapisywanie zmian do bazy danych...");
                 DBHelper.syncAllToDB(listaKontaktow, listaZdarzen);
             } catch (Exception e) {
                 e.printStackTrace();

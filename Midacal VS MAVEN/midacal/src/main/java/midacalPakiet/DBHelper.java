@@ -21,27 +21,41 @@ public class DBHelper {
     }
 
     public static void initDatabase() {
-        String sql = "CREATE TABLE IF NOT EXISTS kontakty ("
-                + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                + "imie TEXT,"
-                + "nazwisko TEXT,"
-                + "telefon TEXT,"
-                + "email TEXT"
-                + ")";
-
         try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
-            stmt.execute(sql);
-            System.out.println("Baza danych zainicjalizowana (" + DB_URL + ")");
-            // utworzenie tabeli zdarzenia
-                String sql2 = "CREATE TABLE IF NOT EXISTS zdarzenia ("
+            // Sprawdzamy istnienie każdej tabeli przed jej utworzeniem/załadowaniem
+            
+            // Tabela: kontakty
+            boolean kontaktyExists = tableExists(stmt, "kontakty");
+            String sqlKontakty = "CREATE TABLE IF NOT EXISTS kontakty ("
+                    + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                    + "imie TEXT,"
+                    + "nazwisko TEXT,"
+                    + "telefon TEXT,"
+                    + "email TEXT"
+                    + ")";
+            stmt.execute(sqlKontakty);
+            if (kontaktyExists) {
+                System.out.println("Tabela 'kontakty' załadowana.");
+            } else {
+                System.out.println("Tabela 'kontakty' utworzona.");
+            }
+
+            // Tabela: zdarzenia
+            boolean zdarzeniaExists = tableExists(stmt, "zdarzenia");
+            String sqlZdarzenia = "CREATE TABLE IF NOT EXISTS zdarzenia ("
                     + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
                     + "nazwa TEXT,"
                     + "data TEXT,"
                     + "lokalizacja TEXT,"
                     + "opis TEXT"
                     + ")";
-            stmt.execute(sql2);
-            System.out.println("Tabela zdarzenia utworzona (jeśli nie istniala)");
+            stmt.execute(sqlZdarzenia);
+            if (zdarzeniaExists) {
+                System.out.println("Tabela 'zdarzenia' załadowana.");
+            } else {
+                System.out.println("Tabela 'zdarzenia' utworzona.");
+            }
+
             // Sprawdzamy, czy kolumna 'lokalizacja' istnieje w tabeli zdarzenia; jeśli nie, dodajemy ją.
             try (ResultSet cols = stmt.executeQuery("PRAGMA table_info('zdarzenia')")) {
                 boolean hasLokalizacja = false;
@@ -60,8 +74,10 @@ public class DBHelper {
             } catch (SQLException e) {
                 System.err.println("Blad sprawdzania kolumn tabeli zdarzenia: " + e.getMessage());
             }
-             // utworzenie tabeli łącznej dla relacji wiele-do-wielu
-            String sql3 = "CREATE TABLE IF NOT EXISTS kontakt_zdarzenie ("
+
+            // Tabela: kontakt_zdarzenie
+            boolean kzExists = tableExists(stmt, "kontakt_zdarzenie");
+            String sqlKZ = "CREATE TABLE IF NOT EXISTS kontakt_zdarzenie ("
                     + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
                     + "kontakt_id INTEGER NOT NULL,"
                     + "zdarzenie_id INTEGER NOT NULL,"
@@ -69,12 +85,24 @@ public class DBHelper {
                     + "FOREIGN KEY(zdarzenie_id) REFERENCES zdarzenia(id) ON DELETE CASCADE,"
                     + "UNIQUE(kontakt_id, zdarzenie_id)"
                     + ")";
-            stmt.execute(sql3);
-            System.out.println("Tabela kontakt_zdarzenie utworzona (jeśli nie istniala)");
+            stmt.execute(sqlKZ);
+            if (kzExists) {
+                System.out.println("Tabela 'kontakt_zdarzenie' załadowana.");
+            } else {
+                System.out.println("Tabela 'kontakt_zdarzenie' utworzona.");
+            }
+
+            System.out.println("Baza danych zainicjalizowana (" + DB_URL + ")");
 
         } catch (SQLException e) {
             System.err.println("Blad inicjalizacji bazy: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    private static boolean tableExists(Statement stmt, String tableName) throws SQLException {
+        try (ResultSet rs = stmt.executeQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='" + tableName + "'")) {
+            return rs.next();
         }
     }
 

@@ -29,25 +29,26 @@ public class Zdarzenie implements Comparable<Zdarzenie>{
 		this.kontakty = new ArrayList<>();
 	}
 	
-	//konstruktor glowny do tworzenia obiektow
-		public Zdarzenie(String nazwa, LocalDate data, String lokalizacja, String opis){
-			this.nazwa=nazwa;
-			this.data=data;
-			if (lokalizacja != null) {
+	// konstruktor glowny do tworzenia obiektow
+	public Zdarzenie(String nazwa, LocalDate data, String lokalizacja, String opis){
+		this.nazwa=nazwa;
+		this.data=data;
+		if (lokalizacja != null) {
+			try {
+				this.lokalizacja = new URI(lokalizacja);
+			} catch (URISyntaxException e) {
+				// spróbuj zastąpić spacje i ustawić jako URI
 				try {
-					this.lokalizacja = new URI(lokalizacja);
-				} catch (URISyntaxException e) {
-					// spróbuj zastąpić spacje i ustawić jako URI
-					try {
-						this.lokalizacja = new URI(lokalizacja.replaceAll(" ", "%20"));
-					} catch (URISyntaxException ex) {
-						this.lokalizacja = null;
-					}
+					this.lokalizacja = new URI(lokalizacja.replaceAll(" ", "%20"));
+				} catch (URISyntaxException ex) {
+					this.lokalizacja = null;
 				}
-			} else {
-				this.lokalizacja = null;
 			}
-			this.opis=opis;
+		} else {
+			this.lokalizacja = null;
+		}
+		this.opis=opis;
+		this.kontakty = new ArrayList<>();
 	}
 	
 	//metody do zapisu set
