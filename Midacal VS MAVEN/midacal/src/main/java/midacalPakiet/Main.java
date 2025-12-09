@@ -27,14 +27,14 @@ public class Main {
         final List<Zdarzenie> listaZdarzen = new ArrayList<>();
         final List<Kontakt> listaKontaktow = new ArrayList<>();
 
-        // ✅ START: Resetuj liczniki ID
+        // START: Resetuj liczniki ID
         Kontakt.resetIdCounter();
         Zdarzenie.resetIdCounter();
         
-        // ✅ Inicjalizuj bazę danych
+        // Inicjalizuj bazę danych
         DBHelper.initDatabase();
 
-        // ✅ Wczytaj dane z bazy danych (jeśli istnieją)
+        // Wczytaj dane z bazy danych (jeśli istnieją)
         List<Kontakt> dbKontakty = DBHelper.getAllKontakty();
         List<Zdarzenie> dbZdarzenia = DBHelper.getAllZdarzenia();
         
