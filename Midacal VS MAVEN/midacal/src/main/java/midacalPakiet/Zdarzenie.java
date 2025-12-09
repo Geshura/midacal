@@ -14,6 +14,7 @@ import java.util.List;
 @XmlRootElement(name = "zdarzenie")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class Zdarzenie implements Comparable<Zdarzenie>{
+    private static int nextId = 1;
     private int id;
 	private String nazwa;
     @XmlJavaTypeAdapter(value = AdapterData.class)
@@ -22,6 +23,7 @@ public class Zdarzenie implements Comparable<Zdarzenie>{
 		@XmlJavaTypeAdapter(AdapterLokalizacja.class)
 		private URI lokalizacja;
 	private String opis;
+	@XmlElement(name = "kontakt")
 	private List<Kontakt> kontakty;
 
 	//konstruktor bezargumentowy
@@ -31,6 +33,7 @@ public class Zdarzenie implements Comparable<Zdarzenie>{
 	
 	// konstruktor glowny do tworzenia obiektow
 	public Zdarzenie(String nazwa, LocalDate data, String lokalizacja, String opis){
+		this.id = nextId++;
 		this.nazwa=nazwa;
 		this.data=data;
 		if (lokalizacja != null) {
@@ -51,7 +54,10 @@ public class Zdarzenie implements Comparable<Zdarzenie>{
 		this.kontakty = new ArrayList<>();
 	}
 	
-	//metody do zapisu set
+	//resetuj licznik ID
+	public static void resetIdCounter(){
+		nextId = 1;
+	}
 	public void setNazwa(String nazwa){
 		this.nazwa=nazwa;
 	}

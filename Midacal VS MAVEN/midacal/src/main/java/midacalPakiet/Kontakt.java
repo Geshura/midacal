@@ -5,6 +5,7 @@ import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 import java.util.ArrayList;
@@ -13,6 +14,7 @@ import java.util.List;
 @XmlRootElement(name = "kontakt")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class Kontakt implements Comparable<Kontakt>{
+    private static int nextId = 1;
     private int id;
 	private String imie;
 	private String nazwisko;
@@ -20,6 +22,7 @@ public class Kontakt implements Comparable<Kontakt>{
 	private PhoneNumber telefon;
     @XmlJavaTypeAdapter(value = AdapterEmail.class)
 	private InternetAddress email;
+	@XmlElement(name = "zdarzenie")
 	private List<Zdarzenie> zdarzenia;
 
 	//konstruktor bezargumentowy
@@ -29,6 +32,7 @@ public class Kontakt implements Comparable<Kontakt>{
 	
 	//konstruktor glowny do tworzenia obiektow
 	public Kontakt(String imie, String nazwisko, PhoneNumber telefon, InternetAddress email) throws AddressException{
+		this.id = nextId++;
 		this.imie=imie;
 		this.nazwisko=nazwisko;
 		this.telefon=telefon;
@@ -39,7 +43,10 @@ public class Kontakt implements Comparable<Kontakt>{
 		this.zdarzenia = new ArrayList<>();
 	}
 	
-	//metody do zapisu set
+	//resetuj licznik ID
+	public static void resetIdCounter(){
+		nextId = 1;
+	}
 	public void setImie(String imie){
 		this.imie=imie;
 	}

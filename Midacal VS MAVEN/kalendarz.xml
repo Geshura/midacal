@@ -1,143 +1,36 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <kalendarz>
     <kontakt>
-        <id>0</id>
+        <id>1</id>
         <imie>Cezary</imie>
         <nazwisko>Pazura</nazwisko>
         <telefon>+48501101101</telefon>
         <email>cezary.pazura@agencja.com</email>
     </kontakt>
     <kontakt>
-        <id>0</id>
+        <id>2</id>
         <imie>Monika</imie>
         <nazwisko>Olejnik</nazwisko>
         <telefon>+48602202202</telefon>
         <email>monika.olejnik@tvn.pl</email>
     </kontakt>
     <kontakt>
-        <id>0</id>
-        <imie>Robert</imie>
-        <nazwisko>Maklowicz</nazwisko>
-        <telefon>+48603303303</telefon>
-        <email>robert.maklowicz@podroze.pl</email>
-    </kontakt>
-    <kontakt>
-        <id>0</id>
+        <id>4</id>
         <imie>Magda</imie>
         <nazwisko>Gessler</nazwisko>
         <telefon>+48704404404</telefon>
         <email>magda.gessler@kuchenne.com</email>
     </kontakt>
     <kontakt>
-        <id>0</id>
+        <id>5</id>
         <imie>Kuba</imie>
         <nazwisko>Wojewodzki</nazwisko>
         <telefon>+48505505505</telefon>
         <email>kuba.wojewodzki@show.pl</email>
     </kontakt>
     <kontakt>
-        <id>0</id>
+        <id>6</id>
         <imie>Katarzyna</imie>
         <nazwisko>Figura</nazwisko>
         <telefon>+48606606606</telefon>
-        <email>katarzyna.figura@film.pl</email>
-    </kontakt>
-    <kontakt>
-        <id>0</id>
-        <imie>Andrzej</imie>
-        <nazwisko>Grabowski</nazwisko>
-        <telefon>+48707707707</telefon>
-        <email>ferdek@kiepscy.pl</email>
-    </kontakt>
-    <kontakt>
-        <id>0</id>
-        <imie>Dorota</imie>
-        <nazwisko>Wellman</nazwisko>
-        <telefon>+48808808808</telefon>
-        <email>dorota.wellman@dziendobry.pl</email>
-    </kontakt>
-    <kontakt>
-        <id>0</id>
-        <imie>Marcin</imie>
-        <nazwisko>Prokop</nazwisko>
-        <telefon>+48509909909</telefon>
-        <email>marcin.prokop@dziendobry.pl</email>
-    </kontakt>
-    <kontakt>
-        <id>0</id>
-        <imie>Szymon</imie>
-        <nazwisko>Holownia</nazwisko>
-        <telefon>+48600000001</telefon>
-        <email>szymon.holownia@sejm.gov.pl</email>
-    </kontakt>
-    <zdarzenie>
-        <id>0</id>
-        <nazwa>Wakacje w Londynie</nazwa>
-        <data>2026-08-10</data>
-        <miejsce>https://www.google.com/maps/search/London,+UK/@51.5074,-0.1278,13z</miejsce>
-        <opis>Lot o 10:30, zwiedzanie muzeow.</opis>
-    </zdarzenie>
-    <zdarzenie>
-        <id>0</id>
-        <nazwa>Open'er Festival 2026</nazwa>
-        <data>2026-07-01</data>
-        <miejsce>https://www.google.com/maps/search/Gdynia-Kosakowo/@54.4909,18.5841,13z</miejsce>
-        <opis>Karnet 4-dniowy, spotkanie z ekipa.</opis>
-    </zdarzenie>
-    <zdarzenie>
-        <id>0</id>
-        <nazwa>Roast Gimpera</nazwa>
-        <data>2026-01-25</data>
-        <miejsce>https://www.google.com/maps/search/Warszawa,+Stodola/@52.2297,21.0122,13z</miejsce>
-        <opis>Bilety kupione, rzad 10.</opis>
-    </zdarzenie>
-    <zdarzenie>
-        <id>0</id>
-        <nazwa>Stand-up: Mateusz Socha</nazwa>
-        <data>2026-03-14</data>
-        <miejsce>https://www.google.com/maps/search/Torun,+CKK+Jordanki/@53.0238,18.5976,13z</miejsce>
-        <opis>Nowy program 'Masochista'.</opis>
-    </zdarzenie>
-    <zdarzenie>
-        <id>0</id>
-        <nazwa>Splyw kajakowy (Rzeka Wda)</nazwa>
-        <data>2026-06-13</data>
-        <miejsce>https://www.google.com/maps/search/Woryty,+Pomeranian/@53.7050,18.5500,13z</miejsce>
-        <opis>Weekendowy splyw z namiotami.</opis>
-    </zdarzenie>
-    <zdarzenie>
-        <id>0</id>
-        <nazwa>Jarmark Bozonarodzeniowy</nazwa>
-        <data>2025-12-14</data>
-        <miejsce>https://www.google.com/maps/search/Wroclaw,+Rynek/@51.1079,17.0385,13z</miejsce>
-        <opis>Spotkanie na grzane wino.</opis>
-    </zdarzenie>
-    <zdarzenie>
-        <id>0</id>
-        <nazwa>Egzamin (Programowanie)</nazwa>
-        <data>2026-01-29</data>
-        <miejsce>https://www.google.com/maps/search/Uniwersytet/@51.1079,17.0385,13z</miejsce>
-        <opis>Sesja zimowa. Powtorzyc Jave!</opis>
-    </zdarzenie>
-    <zdarzenie>
-        <id>0</id>
-        <nazwa>Urodziny wujka Krzysia (50.)</nazwa>
-        <data>2025-11-23</data>
-        <miejsce>https://www.google.com/maps/search/Restauracja+Pod+Debem/@52.2297,21.0122,13z</miejsce>
-        <opis>Kupic prezent.</opis>
-    </zdarzenie>
-    <zdarzenie>
-        <id>0</id>
-        <nazwa>Pyrkon - Festiwal Fantastyki</nazwa>
-        <data>2026-06-12</data>
-        <miejsce>https://www.google.com/maps/search/Poznan,+MTP/@52.4064,16.9252,13z</miejsce>
-        <opis>Caly weekend, kupic bilet 3-dniowy.</opis>
-    </zdarzenie>
-    <zdarzenie>
-        <id>0</id>
-        <nazwa>Rezerwacja na tatuaz</nazwa>
-        <data>2026-02-20</data>
-        <miejsce>https://www.google.com/maps/search/Studio+Czarny+Tusz/@52.2297,21.0122,13z</miejsce>
-        <opis>Dokonczenie 'rekawa'. Sesja o 10:00.</opis>
-    </zdarzenie>
-</kalendarz>
+        <email
