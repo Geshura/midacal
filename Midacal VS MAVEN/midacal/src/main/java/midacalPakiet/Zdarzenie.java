@@ -1,29 +1,31 @@
 package midacalPakiet;
 
 import java.time.LocalDate;
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 import java.net.URI;
 import java.net.URISyntaxException;
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlRootElement;
 import java.util.ArrayList;
 import java.util.List;
 
-@XmlRootElement(name = "zdarzenie")
-@XmlAccessorType(XmlAccessType.FIELD)
+import com.fasterxml.jackson.annotation.JsonProperty; 
+import com.fasterxml.jackson.annotation.JsonFormat; // Nowy Import
+
 public class Zdarzenie implements Comparable<Zdarzenie>{
     private static int nextId = 1;
     private int id;
 	private String nazwa;
-    @XmlJavaTypeAdapter(value = AdapterData.class)
+    
+    // KLUCZOWA POPRAWKA 1: Użycie @JsonFormat, aby jawnie określić format zapisu.
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
+    // KLUCZOWA POPRAWKA 2: Dodajemy @JsonProperty nad polem, aby wymusić serializację TYLKO tego pola
+    @JsonProperty("data")
 	private LocalDate data;
-		@XmlElement(name = "miejsce")
-		@XmlJavaTypeAdapter(AdapterLokalizacja.class)
-		private URI lokalizacja;
+		
+	@JsonProperty("miejsce")
+	private URI lokalizacja;
+	
 	private String opis;
-	@XmlElement(name = "kontakt")
+	
+	@JsonProperty("kontakt")
 	private List<Kontakt> kontakty;
 
 	//konstruktor bezargumentowy
@@ -32,24 +34,13 @@ public class Zdarzenie implements Comparable<Zdarzenie>{
 	}
 	
 	// konstruktor glowny do tworzenia obiektow
-	public Zdarzenie(String nazwa, LocalDate data, String lokalizacja, String opis){
+	public Zdarzenie(String nazwa, LocalDate data, String lokalizacjaStr, String opis){
 		this.id = nextId++;
 		this.nazwa=nazwa;
 		this.data=data;
-		if (lokalizacja != null) {
-			try {
-				this.lokalizacja = new URI(lokalizacja);
-			} catch (URISyntaxException e) {
-				// spróbuj zastąpić spacje i ustawić jako URI
-				try {
-					this.lokalizacja = new URI(lokalizacja.replaceAll(" ", "%20"));
-				} catch (URISyntaxException ex) {
-					this.lokalizacja = null;
-				}
-			}
-		} else {
-			this.lokalizacja = null;
-		}
+		
+		setLokalizacja(lokalizacjaStr);
+        
 		this.opis=opis;
 		this.kontakty = new ArrayList<>();
 	}
@@ -58,27 +49,39 @@ public class Zdarzenie implements Comparable<Zdarzenie>{
 	public static void resetIdCounter(){
 		nextId = 1;
 	}
+    
+	public int getId(){
+		return id;
+	}
+
+	public void setId(int id){
+		this.id = id;
+	}
+    
 	public void setNazwa(String nazwa){
 		this.nazwa=nazwa;
 	}
+    
 	public void setData(LocalDate data){
 		this.data=data;
 	}
-		public void setLokalizacja(String lokalizacja){
-			if (lokalizacja != null) {
+    
+	public void setLokalizacja(String lokalizacjaStr){
+        if (lokalizacjaStr != null && !lokalizacjaStr.trim().isEmpty()) {
+			try {
+				this.lokalizacja = new URI(lokalizacjaStr);
+			} catch (URISyntaxException e) {
 				try {
-					this.lokalizacja = new URI(lokalizacja);
-				} catch (URISyntaxException e) {
-					try {
-						this.lokalizacja = new URI(lokalizacja.replaceAll(" ", "%20"));
-					} catch (URISyntaxException ex) {
-						this.lokalizacja = null;
-					}
+					this.lokalizacja = new URI(lokalizacjaStr.replaceAll(" ", "%20"));
+				} catch (URISyntaxException ex) {
+					this.lokalizacja = null;
 				}
-			} else {
-				this.lokalizacja = null;
 			}
+		} else {
+			this.lokalizacja = null;
 		}
+	}
+    
 	public void setOpis(String opis){
 		this.opis=opis;
 	}
@@ -87,23 +90,19 @@ public class Zdarzenie implements Comparable<Zdarzenie>{
 	public String getNazwa(){
 		return nazwa;
 	}
+    
 	public LocalDate getData(){
 		return data;
 	}
-		public URI getLokalizacja(){
-			return lokalizacja;
-		}
+    
+	public URI getLokalizacja(){
+		return lokalizacja;
+	}
+    
 	public String getOpis(){
 		return opis;
 	}
 
-	public int getId(){
-		return id;
-	}
-
-	public void setId(int id){
-		this.id = id;
-	}
 
 	public List<Kontakt> getKontakty(){
 		return kontakty;
@@ -132,7 +131,8 @@ public class Zdarzenie implements Comparable<Zdarzenie>{
 	@Override
 	public String toString(){
 	    return "Zdarzenie {" +
-	            "nazwa='" + nazwa + "'" + 
+            "id=" + id +
+	            ", nazwa='" + nazwa + "'" + 
 	            ", data=" + data + 
 				   ", lokalizacja='" + (lokalizacja != null ? lokalizacja.toString() : "brak") + "'" + 
 	            ", opis='" + opis + "'" + 

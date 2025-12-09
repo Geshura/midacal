@@ -21,18 +21,6 @@
         <version>1.6.2</version>
     </dependency>
 
-    <!-- JAXB API + runtime (dla javax.xml.bind) -->
-    <dependency>
-        <groupId>javax.xml.bind</groupId>
-        <artifactId>jaxb-api</artifactId>
-        <version>2.3.1</version>
-    </dependency>
-    <dependency>
-        <groupId>org.glassfish.jaxb</groupId>
-        <artifactId>jaxb-runtime</artifactId>
-        <version>2.3.3</version>
-    </dependency>
-
     <!-- Google libphonenumber -->
     <dependency>
         <groupId>com.googlecode.libphonenumber</groupId>
@@ -46,7 +34,20 @@
         <artifactId>sqlite-jdbc</artifactId>
         <version>3.42.0.0</version>
     </dependency>
-    </dependencies>
+ 
+
+    <dependency>
+        <groupId>com.fasterxml.jackson.dataformat</groupId>
+        <artifactId>jackson-dataformat-xml</artifactId>
+        <version>2.16.1</version>
+    </dependency>
+
+    <dependency>
+        <groupId>com.fasterxml.jackson.datatype</groupId>
+        <artifactId>jackson-datatype-jsr310</artifactId>
+        <version>2.16.1</version>
+    </dependency>
+   </dependencies>
 
     <build>
         <plugins>

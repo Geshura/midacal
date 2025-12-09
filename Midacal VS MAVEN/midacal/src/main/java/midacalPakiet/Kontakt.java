@@ -3,27 +3,33 @@ package midacalPakiet;
 import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
 import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 import java.util.ArrayList;
 import java.util.List;
 
-@XmlRootElement(name = "kontakt")
-@XmlAccessorType(XmlAccessType.FIELD)
+import com.fasterxml.jackson.annotation.JsonIgnore; 
+import com.fasterxml.jackson.annotation.JsonProperty; 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize; // Nowy import
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize; // Nowy import
+
 public class Kontakt implements Comparable<Kontakt>{
     private static int nextId = 1;
     private int id;
 	private String imie;
 	private String nazwisko;
-    @XmlJavaTypeAdapter(value = AdapterPhone.class)
+    
+    // ZMIANA: Użycie niestandardowych serializatorów Jacksona
+    @JsonSerialize(using = JacksonSerializers.PhoneNumberSerializer.class)
+    @JsonDeserialize(using = JacksonSerializers.PhoneNumberDeserializer.class)
 	private PhoneNumber telefon;
-    @XmlJavaTypeAdapter(value = AdapterEmail.class)
+    
+    // ZMIANA: Użycie niestandardowych serializatorów Jacksona
+    @JsonSerialize(using = JacksonSerializers.InternetAddressSerializer.class)
+    @JsonDeserialize(using = JacksonSerializers.InternetAddressDeserializer.class)
 	private InternetAddress email;
-	@XmlElement(name = "zdarzenie")
-	private List<Zdarzenie> zdarzenia;
+    
+    @JsonIgnore 
+    @JsonProperty("zdarzenie")
+	private List<Zdarzenie> zdarzenia; 
 
 	//konstruktor bezargumentowy
 	public Kontakt(){
@@ -47,6 +53,15 @@ public class Kontakt implements Comparable<Kontakt>{
 	public static void resetIdCounter(){
 		nextId = 1;
 	}
+
+	public int getId(){
+		return id;
+	}
+
+	public void setId(int id){
+		this.id = id;
+	}
+	
 	public void setImie(String imie){
 		this.imie=imie;
 	}
@@ -61,14 +76,6 @@ public class Kontakt implements Comparable<Kontakt>{
 			email.validate();
 		}
 		this.email=email;
-	}
-
-	public int getId(){
-		return id;
-	}
-
-	public void setId(int id){
-		this.id = id;
 	}
 	
 	//metody do odczytu get
@@ -116,7 +123,8 @@ public class Kontakt implements Comparable<Kontakt>{
         String samemail = (email != null) ? email.getAddress() : "brak";
         
 	    return "Kontakt {" +
-	            "imie='" + imie + "'" + 
+            "id=" + id +
+	            ", imie='" + imie + "'" + 
 	            ", nazwisko=" + nazwisko + 
 	            ", telefon='" + samtelefon + "'" + 
 	            ", email='" + samemail + "'" + 

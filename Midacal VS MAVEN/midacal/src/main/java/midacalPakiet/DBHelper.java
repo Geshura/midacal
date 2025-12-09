@@ -15,6 +15,9 @@ import com.google.i18n.phonenumbers.NumberParseException;
 
 public class DBHelper {
     private static final String DB_URL = "jdbc:sqlite:midacal.db";
+    
+    // USUNIĘTO: public static final String ZDARZENIA_FILE = "zdarzenia.xml";
+    // USUNIĘTO: public static final String KONTAKTY_FILE = "kontakty.xml";
 
     public static Connection getConnection() throws SQLException {
         return DriverManager.getConnection(DB_URL);
@@ -22,7 +25,6 @@ public class DBHelper {
 
     public static void initDatabase() {
         try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
-            // Sprawdzamy istnienie każdej tabeli przed jej utworzeniem/załadowaniem
             
             // Tabela: kontakty
             boolean kontaktyExists = tableExists(stmt, "kontakty");
@@ -56,7 +58,7 @@ public class DBHelper {
                 System.out.println("Tabela 'zdarzenia' utworzona.");
             }
 
-            // Sprawdzamy, czy kolumna 'lokalizacja' istnieje w tabeli zdarzenia; jeśli nie, dodajemy ją.
+            // Sprawdzamy, czy kolumna 'lokalizacja' istnieje
             try (ResultSet cols = stmt.executeQuery("PRAGMA table_info('zdarzenia')")) {
                 boolean hasLokalizacja = false;
                 while (cols.next()) {
@@ -203,7 +205,7 @@ public class DBHelper {
             z.setId(newId);
         }
 
-        // Recreate relations based on matching fields (email or name)
+        // Recreate relations
         for (Zdarzenie z : zdarzenia) {
             int zId = z.getId();
             for (Kontakt k : z.getKontakty()) {
@@ -396,7 +398,7 @@ public class DBHelper {
             String data = (z.getData() != null) ? z.getData().toString() : null;
             insertZdarzenie(z.getNazwa(), data, z.getLokalizacja(), z.getOpis());
         }
-        System.out.println("Kontakty zsynchronizowane z baza");
+        System.out.println("Zdarzenia zsynchronizowane z baza");
     }
 
     public static void clearZdarzeniaKontakty() {
@@ -439,7 +441,7 @@ public class DBHelper {
 
     public static List<Zdarzenie> getZdarzeniaForKontakt(int kontaktId) {
         List<Zdarzenie> zdarzenia = new ArrayList<>();
-        String sql = "SELECT z.nazwa, z.data, z.lokalizacja, z.opis FROM zdarzenia z "
+        String sql = "SELECT z.id, z.nazwa, z.data, z.lokalizacja, z.opis FROM zdarzenia z "
                    + "INNER JOIN kontakt_zdarzenie kz ON z.id = kz.zdarzenie_id "
                    + "WHERE kz.kontakt_id = ?";
 
@@ -449,6 +451,7 @@ public class DBHelper {
             ResultSet rs = pstmt.executeQuery();
 
             while (rs.next()) {
+                int id = rs.getInt("id");
                 String nazwa = rs.getString("nazwa");
                 String dataStr = rs.getString("data");
                 String lokalizacjaStr = rs.getString("lokalizacja");
@@ -460,6 +463,7 @@ public class DBHelper {
                         data = java.time.LocalDate.parse(dataStr);
                     }
                     Zdarzenie z = new Zdarzenie(nazwa, data, lokalizacjaStr, opis);
+                    z.setId(id);
                     zdarzenia.add(z);
                 } catch (Exception e) {
                     System.err.println("Blad podczas parsowania zdarzenia dla kontaktu: " + e.getMessage());
@@ -474,7 +478,7 @@ public class DBHelper {
 
     public static List<Kontakt> getKontaktyForZdarzenie(int zdarzenieId) {
         List<Kontakt> kontakty = new ArrayList<>();
-        String sql = "SELECT k.imie, k.nazwisko, k.telefon, k.email FROM kontakty k "
+        String sql = "SELECT k.id, k.imie, k.nazwisko, k.telefon, k.email FROM kontakty k "
                    + "INNER JOIN kontakt_zdarzenie kz ON k.id = kz.kontakt_id "
                    + "WHERE kz.zdarzenie_id = ?";
 
@@ -485,6 +489,7 @@ public class DBHelper {
 
             PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
             while (rs.next()) {
+                int id = rs.getInt("id");
                 String imie = rs.getString("imie");
                 String nazwisko = rs.getString("nazwisko");
                 String telefonStr = rs.getString("telefon");
@@ -502,6 +507,7 @@ public class DBHelper {
                     }
 
                     Kontakt k = new Kontakt(imie, nazwisko, telefon, email);
+                    k.setId(id);
                     kontakty.add(k);
                 } catch (AddressException | NumberParseException e) {
                     System.err.println("Blad podczas parsowania kontaktu dla zdarzenia: " + e.getMessage());

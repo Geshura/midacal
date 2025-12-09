@@ -1,6 +1,7 @@
 package midacalPakiet;
 
 import java.io.File;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -9,10 +10,13 @@ import java.util.Scanner;
 
 import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.Unmarshaller;
+
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
 
 import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
@@ -22,25 +26,68 @@ public class Main {
     private static final String ZDARZENIA_FILE_PATH = "zdarzenia.xml";
     private static final String KONTAKTY_FILE_PATH = "kontakty.xml";
     private static int xmlSaveCounter = 0;
-    private static final int BACKUP_INTERVAL = 10; // liczba zapisow XML przed backupem do DB
+    private static final int BACKUP_INTERVAL = 10; 
+
+    private static final XmlMapper XML_MAPPER;
+
+    static {
+        XML_MAPPER = new XmlMapper();
+        XML_MAPPER.registerModule(new JavaTimeModule());
+        XML_MAPPER.enable(SerializationFeature.INDENT_OUTPUT);
+    }
+    
+    // ==========================================================
+    // Wewnętrzne statyczne klasy Wrapperów (zastępują KontaktyWrapper.java i ZdarzeniaWrapper.java)
+    // ==========================================================
+    
+    @JacksonXmlRootElement(localName = "kontakty")
+    public static class KontaktyWrapperInternal {
+        @JacksonXmlElementWrapper(useWrapping = false) 
+        @JsonProperty("kontakt")
+        private List<Kontakt> kontakty;
+
+        public List<Kontakt> getKontakty() { return kontakty; }
+        public void setKontakty(List<Kontakt> kontakty) { this.kontakty = kontakty; }
+        public KontaktyWrapperInternal() {}
+    }
+
+    @JacksonXmlRootElement(localName = "zdarzenia")
+    public static class ZdarzeniaWrapperInternal {
+        @JacksonXmlElementWrapper(useWrapping = false)
+        @JsonProperty("zdarzenie")
+        private List<Zdarzenie> zdarzenia;
+
+        public List<Zdarzenie> getZdarzenia() { return zdarzenia; }
+        public void setZdarzenia(List<Zdarzenie> zdarzenia) { this.zdarzenia = zdarzenia; }
+        public ZdarzeniaWrapperInternal() {}
+    }
+
+    // Klasa pomocnicza do wczytywania danych XML
+    private static class DaneXML {
+        List<Zdarzenie> zdarzenia;
+        List<Kontakt> kontakty;
+        public DaneXML(List<Zdarzenie> z, List<Kontakt> k) {
+            this.zdarzenia = z;
+            this.kontakty = k;
+        }
+        public List<Zdarzenie> getZdarzenia() { return zdarzenia; }
+        public List<Kontakt> getKontakty() { return kontakty; }
+    }
+
 
     public static void main(String[] args) {
         final List<Zdarzenie> listaZdarzen = new ArrayList<>();
         final List<Kontakt> listaKontaktow = new ArrayList<>();
 
-        // START: Resetuj liczniki ID
         Kontakt.resetIdCounter();
         Zdarzenie.resetIdCounter();
         
-        // Inicjalizuj bazę danych
         DBHelper.initDatabase();
 
-        // Wczytaj dane z bazy danych (jeśli istnieją)
         List<Kontakt> dbKontakty = DBHelper.getAllKontakty();
         List<Zdarzenie> dbZdarzenia = DBHelper.getAllZdarzenia();
         
         if ((dbKontakty != null && !dbKontakty.isEmpty()) || (dbZdarzenia != null && !dbZdarzenia.isEmpty())) {
-            // Baza ma dane - załaduj je
             if (dbKontakty != null && !dbKontakty.isEmpty()) {
                 listaKontaktow.addAll(dbKontakty);
             }
@@ -49,24 +96,23 @@ public class Main {
             }
             System.out.println("Wczytano dane z bazy danych (" + listaKontaktow.size() + " kontaktow, " + listaZdarzen.size() + " zdarzen)");
         } else {
-            // Jeśli baza pusta -> spróbuj wczytać z XML
-            KalendarzDane wrapper = wczytajDaneZXML();
-            if (wrapper != null && wrapper.getZdarzenia() != null && wrapper.getKontakty() != null) {
-                if (wrapper.getZdarzenia() != null) {
-                    listaZdarzen.addAll(wrapper.getZdarzenia());
+            // Wczytaj dane z XML (dwa pliki)
+            DaneXML daneZXML = wczytajDaneZXML();
+            if (daneZXML != null) {
+                if (daneZXML.getZdarzenia() != null) {
+                    listaZdarzen.addAll(daneZXML.getZdarzenia());
                 }
-                if (wrapper.getKontakty() != null) {
-                    listaKontaktow.addAll(wrapper.getKontakty());
+                if (daneZXML.getKontakty() != null) {
+                    listaKontaktow.addAll(daneZXML.getKontakty());
                 }
                 if (!listaKontaktow.isEmpty() || !listaZdarzen.isEmpty()) {
                     System.out.println("Wczytano dane z plików " + ZDARZENIA_FILE_PATH + " i " + KONTAKTY_FILE_PATH + " (" + listaKontaktow.size() + " kontaktow, " + listaZdarzen.size() + " zdarzen)");
-                    // Synchronizuj wczytane dane do bazy
                     DBHelper.syncAllToDB(listaKontaktow, listaZdarzen);
                 }
             }
         }
 
-        // Dodaj hook wyjscia, aby zapisac aktualne dane do bazy przy zamknieciu aplikacji
+        // Hook wyjścia
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
                 System.out.println("\nZapisywanie zmian do bazy danych...");
@@ -84,7 +130,7 @@ public class Main {
             System.out.println("\n========== KALENDARZ ==========");
             System.out.println("1. Kontakty");
             System.out.println("2. Zdarzenia");
-            System.out.println("3. Utwórz plik testowy");
+            System.out.println("3. Utwórz pliki testowe");
             System.out.println("4. Wyjdz");
             System.out.print("Wybierz opcje: ");
 
@@ -119,8 +165,102 @@ public class Main {
 
         scanner.close();
     }
+    
+    // --- ZMIANA METOD ZAPISU/ODCZYTU XML (Jackson, 2 pliki) ---
 
-    private static void menuKontakty(List<Kontakt> listaKontaktow, List<Zdarzenie> listaZdarzen, Scanner scanner) {
+    public static void zapiszDaneDoXML(List<Zdarzenie> listaZdarzen, List<Kontakt> listaKontaktow) {
+        zapiszZdarzeniaDoXML(listaZdarzen);
+        zapiszKontaktyDoXML(listaKontaktow);
+
+        xmlSaveCounter++;
+        if (xmlSaveCounter >= BACKUP_INTERVAL) {
+            System.out.println("Automatyczny backup: synchronizacja danych XML do bazy danych...");
+            try {
+                DBHelper.syncAllToDB(listaKontaktow, listaZdarzen);
+            } catch (Exception e) {
+                System.err.println("Blad podczas backupu do DB: " + e.getMessage());
+            }
+            xmlSaveCounter = 0;
+        }
+    }
+
+    public static void zapiszZdarzeniaDoXML(List<Zdarzenie> listaZdarzen) {
+        try {
+            ZdarzeniaWrapperInternal wrapper = new ZdarzeniaWrapperInternal();
+            wrapper.setZdarzenia(listaZdarzen);
+
+            XML_MAPPER.writer()
+                .withRootName("zdarzenia")
+                .writeValue(new File(ZDARZENIA_FILE_PATH), wrapper);
+                
+            System.out.println("Pomyslnie zapisano zdarzenia do pliku " + ZDARZENIA_FILE_PATH);
+        } catch (IOException e) {
+            System.err.println("Blad podczas zapisu zdarzen do XML: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    public static void zapiszKontaktyDoXML(List<Kontakt> listaKontaktow) {
+        try {
+            KontaktyWrapperInternal wrapper = new KontaktyWrapperInternal();
+            wrapper.setKontakty(listaKontaktow);
+
+            XML_MAPPER.writer()
+                .withRootName("kontakty")
+                .writeValue(new File(KONTAKTY_FILE_PATH), wrapper);
+                
+            System.out.println("Pomyslnie zapisano kontakty do pliku " + KONTAKTY_FILE_PATH);
+        } catch (IOException e) {
+            System.err.println("Blad podczas zapisu kontaktow do XML: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    public static DaneXML wczytajDaneZXML() {
+        List<Zdarzenie> zdarzenia = new ArrayList<>();
+        List<Kontakt> kontakty = new ArrayList<>();
+        boolean loaded = false;
+
+        try {
+            File zdarzeniaFile = new File(ZDARZENIA_FILE_PATH);
+            if (zdarzeniaFile.exists()) {
+                ZdarzeniaWrapperInternal zdarzeniaWrapper = XML_MAPPER.readValue(zdarzeniaFile, ZdarzeniaWrapperInternal.class);
+                
+                if (zdarzeniaWrapper.getZdarzenia() != null) {
+                    zdarzenia.addAll(zdarzeniaWrapper.getZdarzenia());
+                    loaded = true;
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Blad podczas wczytywania zdarzen z XML: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        try {
+            File kontaktyFile = new File(KONTAKTY_FILE_PATH);
+            if (kontaktyFile.exists()) {
+                KontaktyWrapperInternal kontaktyWrapper = XML_MAPPER.readValue(kontaktyFile, KontaktyWrapperInternal.class);
+                
+                if (kontaktyWrapper.getKontakty() != null) {
+                    kontakty.addAll(kontaktyWrapper.getKontakty());
+                    loaded = true;
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Blad podczas wczytywania kontaktow z XML: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        if (loaded) {
+            return new DaneXML(zdarzenia, kontakty);
+        }
+
+        return null;
+    }
+    
+    // --- RESZTA METOD MENU (W CAŁOŚCI) ---
+
+    private static void menuKontakty(List<Kontakt> listaKontaktow, List<Zdarzenie> listaZdarzen, Scanner scanner) { 
         boolean inMenu = true;
         while (inMenu) {
             System.out.println("\n========== MENU KONTAKTY ==========");
@@ -166,8 +306,7 @@ public class Main {
             }
         }
     }
-
-    private static void menuZdarzenia(List<Zdarzenie> listaZdarzen, List<Kontakt> listaKontaktow, Scanner scanner) {
+    private static void menuZdarzenia(List<Zdarzenie> listaZdarzen, List<Kontakt> listaKontaktow, Scanner scanner) { 
         boolean inMenu = true;
         while (inMenu) {
             System.out.println("\n========== MENU ZDARZENIA ==========");
@@ -213,40 +352,33 @@ public class Main {
             }
         }
     }
-
-    private static void wczytajPlikTestowy(List<Zdarzenie> listaZdarzen, List<Kontakt> listaKontaktow) {
+    private static void wczytajPlikTestowy(List<Zdarzenie> listaZdarzen, List<Kontakt> listaKontaktow) { 
         File testFileZdarzenia = new File(ZDARZENIA_FILE_PATH);
         File testFileKontakty = new File(KONTAKTY_FILE_PATH);
 
-        // Sprawdź czy pliki już istnieją
         if (testFileZdarzenia.exists() || testFileKontakty.exists()) {
             System.out.println("Pliki testowe juz istnieja!");
             System.out.println("Aby stworzyc nowe pliki, najpierw usun: " + ZDARZENIA_FILE_PATH + " i " + KONTAKTY_FILE_PATH);
             return;
         }
         
-        // Resetuj liczniki ID
         Kontakt.resetIdCounter();
         Zdarzenie.resetIdCounter();
         
-        // Czyść obecne dane
         listaZdarzen.clear();
         listaKontaktow.clear();
         
-        // Stwórz dane testowe
         stworzDomyslneDane(listaZdarzen, listaKontaktow);
         
-        // Zapisz dane testowe do pliku XML (bez synchronizacji do bazy)
         zapiszDaneDoXML(listaZdarzen, listaKontaktow);
         
         System.out.println("Pliki testowe stworzone pomyslnie!");
         System.out.println("Stworzono " + listaKontaktow.size() + " kontaktow i " + listaZdarzen.size() + " zdarzen.");
         System.out.println("Dane zapisane do: " + ZDARZENIA_FILE_PATH + " i " + KONTAKTY_FILE_PATH);
     }
-
     private static void menuSortowaniaKontakty(List<Kontakt> listaKontaktow, Scanner scanner) {
         System.out.println("\n=== SORTOWANIE KONTAKTOW ===");
-        System.out.println("1. Po nazwisku");
+        System.out.println("1. Po nazwisku (domyslne)");
         System.out.println("2. Po imieniu");
         System.out.println("3. Po telefonie");
         System.out.println("4. Po emailu");
@@ -268,25 +400,24 @@ public class Main {
                 wyswietlKontakty(listaKontaktow);
                 break;
             case 2:
-                Collections.sort(listaKontaktow, new SortKontaktImie());
+                Collections.sort(listaKontaktow, Sortowanie.SORTUJ_KONTAKT_IMIE);
                 wyswietlKontakty(listaKontaktow);
                 break;
             case 3:
-                Collections.sort(listaKontaktow, new SortKontaktTelefon());
+                Collections.sort(listaKontaktow, Sortowanie.SORTUJ_KONTAKT_TELEFON);
                 wyswietlKontakty(listaKontaktow);
                 break;
             case 4:
-                Collections.sort(listaKontaktow, new SortKontaktEmail());
+                Collections.sort(listaKontaktow, Sortowanie.SORTUJ_KONTAKT_EMAIL);
                 wyswietlKontakty(listaKontaktow);
                 break;
             default:
                 System.out.println("Nieznana opcja!");
         }
     }
-
     private static void menuSortowaniaZdarzenia(List<Zdarzenie> listaZdarzen, Scanner scanner) {
         System.out.println("\n=== SORTOWANIE ZDARZEN ===");
-        System.out.println("1. Po dacie");
+        System.out.println("1. Po dacie (domyslne)");
         System.out.println("2. Po nazwie");
         System.out.println("3. Po miejscu");
         System.out.println("4. Po opisie");
@@ -308,22 +439,21 @@ public class Main {
                 wyswietlZdarzenia(listaZdarzen);
                 break;
             case 2:
-                Collections.sort(listaZdarzen, new SortZdarzenieNazwa());
+                Collections.sort(listaZdarzen, Sortowanie.SORTUJ_ZDARZENIE_NAZWA);
                 wyswietlZdarzenia(listaZdarzen);
                 break;
             case 3:
-                Collections.sort(listaZdarzen, new SortZdarzenieMiejsce());
+                Collections.sort(listaZdarzen, Sortowanie.SORTUJ_ZDARZENIE_MIEJSCE);
                 wyswietlZdarzenia(listaZdarzen);
                 break;
             case 4:
-                Collections.sort(listaZdarzen, new SortZdarzenieOpis());
+                Collections.sort(listaZdarzen, Sortowanie.SORTUJ_ZDARZENIE_OPIS);
                 wyswietlZdarzenia(listaZdarzen);
                 break;
             default:
                 System.out.println("Nieznana opcja!");
         }
     }
-
     private static void wyswietlKontakty(List<Kontakt> listaKontaktow) {
         if (listaKontaktow.isEmpty()) {
             System.out.println("Brak kontaktow.");
@@ -334,7 +464,6 @@ public class Main {
             System.out.println(i + ". " + listaKontaktow.get(i));
         }
     }
-
     private static void wyswietlZdarzenia(List<Zdarzenie> listaZdarzen) {
         if (listaZdarzen.isEmpty()) {
             System.out.println("Brak zdarzen.");
@@ -345,7 +474,6 @@ public class Main {
             System.out.println(i + ". " + listaZdarzen.get(i));
         }
     }
-
     private static void wyswietlSzczegolKontaktu(List<Kontakt> listaKontaktow, List<Zdarzenie> listaZdarzen, Scanner scanner) {
         if (listaKontaktow.isEmpty()) {
             System.out.println("Brak kontaktow.");
@@ -358,23 +486,24 @@ public class Main {
             if (idx >= 0 && idx < listaKontaktow.size()) {
                 Kontakt k = listaKontaktow.get(idx);
                 System.out.println("\n=== SZCZEGOLY KONTAKTU ===");
+                System.out.println("ID (Baza): " + k.getId());
                 System.out.println("Imie: " + k.getImie());
                 System.out.println("Nazwisko: " + k.getNazwisko());
                 System.out.println("Telefon: " + (k.getTelefon() != null ? k.getTelefon().toString() : "brak"));
                 System.out.println("Email: " + (k.getEmail() != null ? k.getEmail().toString() : "brak"));
                 
-                List<Zdarzenie> zdarzenia = k.getZdarzenia();
-                if (zdarzenia != null && !zdarzenia.isEmpty()) {
-                    System.out.println("\n--- Zdarzenia w ktorych biora udzial ---");
-                    for (int i = 0; i < zdarzenia.size(); i++) {
-                        System.out.println(i + ". " + zdarzenia.get(i).getNazwa() + " (" + zdarzenia.get(i).getData() + ")");
+                List<Zdarzenie> dbZdarzenia = DBHelper.getZdarzeniaForKontakt(k.getId()); 
+                if (dbZdarzenia != null && !dbZdarzenia.isEmpty()) {
+                    System.out.println("\n--- Zdarzenia w ktorych biora udzial (z bazy) ---");
+                    for (int i = 0; i < dbZdarzenia.size(); i++) {
+                        System.out.println(i + ". ID: " + dbZdarzenia.get(i).getId() + " - " + dbZdarzenia.get(i).getNazwa() + " (" + dbZdarzenia.get(i).getData() + ")"); 
                     }
                 } else {
                     System.out.println("\n--- Brak udzialu w zdarzeniach ---");
                 }
                 
-                System.out.println("\n1. Przypisz do zdarzenia");
-                System.out.println("2. Usun z zdarzenia");
+                System.out.println("\n1. Przypisz do zdarzenia (w bazie)");
+                System.out.println("2. Usun z zdarzenia (w bazie)");
                 System.out.println("3. Cofnij");
                 System.out.print("Wybierz: ");
                 
@@ -394,7 +523,6 @@ public class Main {
             scanner.nextLine();
         }
     }
-
     private static void przypisKontaktDoZdarzenia(Kontakt kontakt, List<Zdarzenie> listaZdarzen, List<Kontakt> listaKontaktow, Scanner scanner) {
         if (listaZdarzen.isEmpty()) {
             System.out.println("Brak zdarzen do przypisania.");
@@ -403,34 +531,23 @@ public class Main {
         
         System.out.println("\n--- Dostepne zdarzenia ---");
         for (int i = 0; i < listaZdarzen.size(); i++) {
-            System.out.println(i + ". " + listaZdarzen.get(i).getNazwa() + " (" + listaZdarzen.get(i).getData() + ")");
+            System.out.println(i + ". ID: " + listaZdarzen.get(i).getId() + " - " + listaZdarzen.get(i).getNazwa() + " (" + listaZdarzen.get(i).getData() + ")");
         }
         
-        System.out.print("Podaj numer zdarzenia aby przypisac: ");
+        System.out.print("Podaj numer zdarzenia (z listy 0, 1, 2...) aby przypisac: ");
         try {
             int zdarzenieIdx = scanner.nextInt();
             scanner.nextLine();
             if (zdarzenieIdx >= 0 && zdarzenieIdx < listaZdarzen.size()) {
                 Zdarzenie zdarzenie = listaZdarzen.get(zdarzenieIdx);
                 
-                if (kontakt.getZdarzenia() == null) {
-                    kontakt.setZdarzenia(new ArrayList<>());
-                }
-                if (!kontakt.getZdarzenia().contains(zdarzenie)) {
-                    kontakt.getZdarzenia().add(zdarzenie);
-                    
-                    if (zdarzenie.getKontakty() == null) {
-                        zdarzenie.setKontakty(new ArrayList<>());
-                    }
-                    if (!zdarzenie.getKontakty().contains(kontakt)) {
-                        zdarzenie.getKontakty().add(kontakt);
-                    }
-                    
-                    zapiszDaneDoXML(listaZdarzen, listaKontaktow);
-                    System.out.println("Kontakt przypisany do zdarzenia!");
-                } else {
-                    System.out.println("Kontakt juz jest przypisany do tego zdarzenia.");
-                }
+                DBHelper.addZdarzenieToKontakt(kontakt.getId(), zdarzenie.getId()); 
+                
+                kontakt.addZdarzenie(zdarzenie);
+                zdarzenie.addKontakt(kontakt);
+                
+                zapiszDaneDoXML(listaZdarzen, listaKontaktow); 
+                System.out.println("Kontakt przypisany do zdarzenia (Baza i XML)!");
             } else {
                 System.out.println("Bledny numer!");
             }
@@ -439,32 +556,39 @@ public class Main {
             scanner.nextLine();
         }
     }
-
     private static void usunKontaktZZdarzenia(Kontakt kontakt, List<Zdarzenie> listaZdarzen, List<Kontakt> listaKontaktow, Scanner scanner) {
-        List<Zdarzenie> zdarzenia = kontakt.getZdarzenia();
-        if (zdarzenia == null || zdarzenia.isEmpty()) {
+        List<Zdarzenie> dbZdarzenia = DBHelper.getZdarzeniaForKontakt(kontakt.getId()); 
+        
+        if (dbZdarzenia == null || dbZdarzenia.isEmpty()) {
             System.out.println("Kontakt nie ma przypisanych zdarzen.");
             return;
         }
         
         System.out.println("\n--- Przypisane zdarzenia ---");
-        for (int i = 0; i < zdarzenia.size(); i++) {
-            System.out.println(i + ". " + zdarzenia.get(i).getNazwa() + " (" + zdarzenia.get(i).getData() + ")");
+        for (int i = 0; i < dbZdarzenia.size(); i++) {
+            System.out.println(i + ". ID: " + dbZdarzenia.get(i).getId() + " - " + dbZdarzenia.get(i).getNazwa() + " (" + dbZdarzenia.get(i).getData() + ")");
         }
         
-        System.out.print("Podaj numer zdarzenia aby usunac: ");
+        System.out.print("Podaj numer zdarzenia (z listy 0, 1, 2...) aby usunac: ");
         try {
             int zdarzenieIdx = scanner.nextInt();
             scanner.nextLine();
-            if (zdarzenieIdx >= 0 && zdarzenieIdx < zdarzenia.size()) {
-                Zdarzenie zdarzenie = zdarzenia.remove(zdarzenieIdx);
+            if (zdarzenieIdx >= 0 && zdarzenieIdx < dbZdarzenia.size()) {
+                Zdarzenie zdarzenieDoUsuniecia = dbZdarzenia.get(zdarzenieIdx);
                 
-                if (zdarzenie.getKontakty() != null) {
-                    zdarzenie.getKontakty().remove(kontakt);
+                DBHelper.removeZdarzenieFromKontakt(kontakt.getId(), zdarzenieDoUsuniecia.getId());
+                
+                Zdarzenie glownaListaZdarzenie = listaZdarzen.stream()
+                        .filter(z -> z.getId() == zdarzenieDoUsuniecia.getId())
+                        .findFirst().orElse(null);
+                        
+                if (glownaListaZdarzenie != null) {
+                    kontakt.removeZdarzenie(glownaListaZdarzenie);
+                    glownaListaZdarzenie.removeKontakt(kontakt);
                 }
                 
                 zapiszDaneDoXML(listaZdarzen, listaKontaktow);
-                System.out.println("Kontakt usuniety ze zdarzenia!");
+                System.out.println("Kontakt usuniety ze zdarzenia (Baza i XML)!");
             } else {
                 System.out.println("Bledny numer!");
             }
@@ -473,7 +597,6 @@ public class Main {
             scanner.nextLine();
         }
     }
-
     private static void wyswietlSzczegolZdarzenia(List<Zdarzenie> listaZdarzen, List<Kontakt> listaKontaktow, Scanner scanner) {
         if (listaZdarzen.isEmpty()) {
             System.out.println("Brak zdarzen.");
@@ -486,23 +609,24 @@ public class Main {
             if (idx >= 0 && idx < listaZdarzen.size()) {
                 Zdarzenie z = listaZdarzen.get(idx);
                 System.out.println("\n=== SZCZEGOLY ZDARZENIA ===");
+                System.out.println("ID (Baza): " + z.getId());
                 System.out.println("Nazwa: " + z.getNazwa());
-                System.out.println("Data: " + z.getData());
+                System.out.println("Data: " + z.getData()); 
                 System.out.println("Lokalizacja: " + z.getLokalizacja());
                 System.out.println("Opis: " + z.getOpis());
                 
-                List<Kontakt> kontakty = z.getKontakty();
-                if (kontakty != null && !kontakty.isEmpty()) {
-                    System.out.println("\n--- Kontakty biore udzial w zdarzeniu ---");
-                    for (int i = 0; i < kontakty.size(); i++) {
-                        System.out.println(i + ". " + kontakty.get(i).getImie() + " " + kontakty.get(i).getNazwisko());
+                List<Kontakt> dbKontakty = DBHelper.getKontaktyForZdarzenie(z.getId()); 
+                if (dbKontakty != null && !dbKontakty.isEmpty()) {
+                    System.out.println("\n--- Kontakty biorace udzial w zdarzeniu (z bazy) ---");
+                    for (int i = 0; i < dbKontakty.size(); i++) {
+                        System.out.println(i + ". ID: " + dbKontakty.get(i).getId() + " - " + dbKontakty.get(i).getImie() + " " + dbKontakty.get(i).getNazwisko());
                     }
                 } else {
                     System.out.println("\n--- Brak kontaktow w tym zdarzeniu ---");
                 }
                 
-                System.out.println("\n1. Przypisz kontakt do zdarzenia");
-                System.out.println("2. Usun kontakt ze zdarzenia");
+                System.out.println("\n1. Przypisz kontakt do zdarzenia (w bazie)");
+                System.out.println("2. Usun kontakt ze zdarzenia (w bazie)");
                 System.out.println("3. Cofnij");
                 System.out.print("Wybierz: ");
                 
@@ -522,7 +646,6 @@ public class Main {
             scanner.nextLine();
         }
     }
-
     private static void przypisZdarzenieDoKontaktu(Zdarzenie zdarzenie, List<Kontakt> listaKontaktow, List<Zdarzenie> listaZdarzen, Scanner scanner) {
         if (listaKontaktow.isEmpty()) {
             System.out.println("Brak kontaktow do przypisania.");
@@ -531,34 +654,23 @@ public class Main {
         
         System.out.println("\n--- Dostepni kontakty ---");
         for (int i = 0; i < listaKontaktow.size(); i++) {
-            System.out.println(i + ". " + listaKontaktow.get(i).getImie() + " " + listaKontaktow.get(i).getNazwisko());
+            System.out.println(i + ". ID: " + listaKontaktow.get(i).getId() + " - " + listaKontaktow.get(i).getImie() + " " + listaKontaktow.get(i).getNazwisko());
         }
         
-        System.out.print("Podaj numer kontaktu aby przypisac: ");
+        System.out.print("Podaj numer kontaktu (z listy 0, 1, 2...) aby przypisac: ");
         try {
             int kontaktIdx = scanner.nextInt();
             scanner.nextLine();
             if (kontaktIdx >= 0 && kontaktIdx < listaKontaktow.size()) {
                 Kontakt kontakt = listaKontaktow.get(kontaktIdx);
                 
-                if (zdarzenie.getKontakty() == null) {
-                    zdarzenie.setKontakty(new ArrayList<>());
-                }
-                if (!zdarzenie.getKontakty().contains(kontakt)) {
-                    zdarzenie.getKontakty().add(kontakt);
-                    
-                    if (kontakt.getZdarzenia() == null) {
-                        kontakt.setZdarzenia(new ArrayList<>());
-                    }
-                    if (!kontakt.getZdarzenia().contains(zdarzenie)) {
-                        kontakt.getZdarzenia().add(zdarzenie);
-                    }
-                    
-                    zapiszDaneDoXML(listaZdarzen, listaKontaktow);
-                    System.out.println("Kontakt przypisany do zdarzenia!");
-                } else {
-                    System.out.println("Kontakt juz jest przypisany do tego zdarzenia.");
-                }
+                DBHelper.addZdarzenieToKontakt(kontakt.getId(), zdarzenie.getId());
+                
+                zdarzenie.addKontakt(kontakt);
+                kontakt.addZdarzenie(zdarzenie);
+                
+                zapiszDaneDoXML(listaZdarzen, listaKontaktow);
+                System.out.println("Kontakt przypisany do zdarzenia (Baza i XML)!");
             } else {
                 System.out.println("Bledny numer!");
             }
@@ -567,32 +679,39 @@ public class Main {
             scanner.nextLine();
         }
     }
-
     private static void usunKontaktZeZdarzenia(Zdarzenie zdarzenie, List<Zdarzenie> listaZdarzen, List<Kontakt> listaKontaktow, Scanner scanner) {
-        List<Kontakt> kontakty = zdarzenie.getKontakty();
-        if (kontakty == null || kontakty.isEmpty()) {
+        List<Kontakt> dbKontakty = DBHelper.getKontaktyForZdarzenie(zdarzenie.getId()); 
+        
+        if (dbKontakty == null || dbKontakty.isEmpty()) {
             System.out.println("Zdarzenie nie ma przypisanych kontaktow.");
             return;
         }
         
         System.out.println("\n--- Przypisane kontakty ---");
-        for (int i = 0; i < kontakty.size(); i++) {
-            System.out.println(i + ". " + kontakty.get(i).getImie() + " " + kontakty.get(i).getNazwisko());
+        for (int i = 0; i < dbKontakty.size(); i++) {
+            System.out.println(i + ". ID: " + dbKontakty.get(i).getId() + " - " + dbKontakty.get(i).getImie() + " " + dbKontakty.get(i).getNazwisko());
         }
         
-        System.out.print("Podaj numer kontaktu aby usunac: ");
+        System.out.print("Podaj numer kontaktu (z listy 0, 1, 2...) aby usunac: ");
         try {
             int kontaktIdx = scanner.nextInt();
             scanner.nextLine();
-            if (kontaktIdx >= 0 && kontaktIdx < kontakty.size()) {
-                Kontakt kontakt = kontakty.remove(kontaktIdx);
+            if (kontaktIdx >= 0 && kontaktIdx < dbKontakty.size()) {
+                Kontakt kontaktDoUsuniecia = dbKontakty.get(kontaktIdx);
                 
-                if (kontakt.getZdarzenia() != null) {
-                    kontakt.getZdarzenia().remove(zdarzenie);
+                DBHelper.removeZdarzenieFromKontakt(kontaktDoUsuniecia.getId(), zdarzenie.getId());
+                
+                Kontakt glownaListaKontakt = listaKontaktow.stream()
+                        .filter(k -> k.getId() == kontaktDoUsuniecia.getId())
+                        .findFirst().orElse(null);
+                
+                if (glownaListaKontakt != null) {
+                    zdarzenie.removeKontakt(glownaListaKontakt);
+                    glownaListaKontakt.removeZdarzenie(zdarzenie);
                 }
                 
                 zapiszDaneDoXML(listaZdarzen, listaKontaktow);
-                System.out.println("Kontakt usuniety ze zdarzenia!");
+                System.out.println("Kontakt usuniety ze zdarzenia (Baza i XML)!");
             } else {
                 System.out.println("Bledny numer!");
             }
@@ -601,7 +720,6 @@ public class Main {
             scanner.nextLine();
         }
     }
-
     private static void dodajKontakt(List<Kontakt> listaKontaktow, List<Zdarzenie> listaZdarzen, Scanner scanner) {
         try {
             System.out.print("Imie: ");
@@ -640,9 +758,9 @@ public class Main {
             System.out.println("Kontakt dodany!");
         } catch (Exception e) {
             System.err.println("Blad: " + e.getMessage());
+            scanner.nextLine(); // Konsumowanie ewentualnych pozostałości
         }
     }
-
     private static void usunKontakt(List<Kontakt> listaKontaktow, List<Zdarzenie> listaZdarzen, Scanner scanner) {
         wyswietlKontakty(listaKontaktow);
         System.out.print("Podaj numer kontaktu do usunieccia: ");
@@ -650,7 +768,8 @@ public class Main {
             int idx = scanner.nextInt();
             scanner.nextLine();
             if (idx >= 0 && idx < listaKontaktow.size()) {
-                listaKontaktow.remove(idx);
+                listaKontaktow.remove(idx); 
+
                 zapiszDaneDoXML(listaZdarzen, listaKontaktow);
                 System.out.println("Kontakt usuniety!");
             } else {
@@ -661,7 +780,6 @@ public class Main {
             scanner.nextLine();
         }
     }
-
     private static void dodajZdarzenie(List<Zdarzenie> listaZdarzen, List<Kontakt> listaKontaktow, Scanner scanner) {
         try {
             System.out.print("Nazwa zdarzenia: ");
@@ -674,15 +792,15 @@ public class Main {
             String opis = scanner.nextLine();
 
             LocalDate data = LocalDate.parse(dataStr);
-            Zdarzenie z = new Zdarzenie(nazwa, data, lokalizacja, opis);
+            Zdarzenie z = new Zdarzenie(nazwa, data, lokalizacja, opis); 
             listaZdarzen.add(z);
             zapiszDaneDoXML(listaZdarzen, listaKontaktow);
             System.out.println("Zdarzenie dodane!");
         } catch (Exception e) {
             System.err.println("Blad: " + e.getMessage());
+            scanner.nextLine();
         }
     }
-
     private static void usunZdarzenie(List<Zdarzenie> listaZdarzen, List<Kontakt> listaKontaktow, Scanner scanner) {
         wyswietlZdarzenia(listaZdarzen);
         System.out.print("Podaj numer zdarzenia do usunieccia: ");
@@ -691,6 +809,7 @@ public class Main {
             scanner.nextLine();
             if (idx >= 0 && idx < listaZdarzen.size()) {
                 listaZdarzen.remove(idx);
+
                 zapiszDaneDoXML(listaZdarzen, listaKontaktow);
                 System.out.println("Zdarzenie usuniete!");
             } else {
@@ -701,12 +820,9 @@ public class Main {
             scanner.nextLine();
         }
     }
-
     private static void stworzDomyslneDane(List<Zdarzenie> listaZdarzen, List<Kontakt> listaKontaktow) {
-        //tworzenie obiektu PhoneNumberUtil do walidacji numerow telefonow
         PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
 
-        //dodanie 10 zdarzen do listy zdarzen z URL-ami na Google Maps
         listaZdarzen.add(new Zdarzenie("Wakacje w Londynie", LocalDate.of(2026, 8, 10), "https://www.google.com/maps/search/London,+UK/@51.5074,-0.1278,13z", "Lot o 10:30, zwiedzanie muzeow."));
         listaZdarzen.add(new Zdarzenie("Open'er Festival 2026", LocalDate.of(2026, 7, 1), "https://www.google.com/maps/search/Gdynia-Kosakowo/@54.4909,18.5841,13z", "Karnet 4-dniowy, spotkanie z ekipa."));
         listaZdarzen.add(new Zdarzenie("Roast Gimpera", LocalDate.of(2026, 1, 25), "https://www.google.com/maps/search/Warszawa,+Stodola/@52.2297,21.0122,13z", "Bilety kupione, rzad 10."));
@@ -718,8 +834,6 @@ public class Main {
         listaZdarzen.add(new Zdarzenie("Pyrkon - Festiwal Fantastyki", LocalDate.of(2026, 6, 12), "https://www.google.com/maps/search/Poznan,+MTP/@52.4064,16.9252,13z", "Caly weekend, kupic bilet 3-dniowy."));
         listaZdarzen.add(new Zdarzenie("Rezerwacja na tatuaz", LocalDate.of(2026, 2, 20), "https://www.google.com/maps/search/Studio+Czarny+Tusz/@52.2297,21.0122,13z", "Dokonczenie 'rekawa'. Sesja o 10:00."));
 
-        //dodanie 10 kontaktow do listy kontaktow
-        //sprawdzenie poprawnosci numerow telefonow i adresow e-mail
         try {
             listaKontaktow.add(new Kontakt("Cezary", "Pazura", phoneUtil.parse("501101101", "PL"), new InternetAddress("cezary.pazura@agencja.com")));
             listaKontaktow.add(new Kontakt("Monika", "Olejnik", phoneUtil.parse("602202202", "PL"), new InternetAddress("monika.olejnik@tvn.pl")));
@@ -737,98 +851,5 @@ public class Main {
         } catch (NumberParseException e) {
             System.err.println("Blad w numerze telefonu: " + e.getMessage());
         }
-    }
-
-    public static void zapiszDaneDoXML(List<Zdarzenie> listaZdarzen, List<Kontakt> listaKontaktow) {
-        zapiszZdarzeniaDoXML(listaZdarzen);
-        zapiszKontaktyDoXML(listaKontaktow);
-
-        // Inkremencja licznika zapisu XML i opcjonalny backup do bazy co BACKUP_INTERVAL zapisow
-        xmlSaveCounter++;
-        if (xmlSaveCounter >= BACKUP_INTERVAL) {
-            System.out.println("Automatyczny backup: synchronizacja danych XML do bazy danych...");
-            try {
-                DBHelper.syncAllToDB(listaKontaktow, listaZdarzen);
-            } catch (Exception e) {
-                System.err.println("Blad podczas backupu do DB: " + e.getMessage());
-            }
-            xmlSaveCounter = 0;
-        }
-    }
-
-    public static void zapiszZdarzeniaDoXML(List<Zdarzenie> listaZdarzen) {
-        try {
-            JAXBContext context = JAXBContext.newInstance(ZdarzeniaWrapper.class);
-            Marshaller marshaller = context.createMarshaller();
-            marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
-
-            ZdarzeniaWrapper wrapper = new ZdarzeniaWrapper();
-            wrapper.setZdarzenia(listaZdarzen);
-
-            marshaller.marshal(wrapper, new File(ZDARZENIA_FILE_PATH));
-            System.out.println("Pomyslnie zapisano zdarzenia do pliku " + ZDARZENIA_FILE_PATH);
-        } catch (JAXBException e) {
-            System.err.println("Blad podczas zapisu zdarzen do XML: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    public static void zapiszKontaktyDoXML(List<Kontakt> listaKontaktow) {
-        try {
-            JAXBContext context = JAXBContext.newInstance(KontaktyWrapper.class);
-            Marshaller marshaller = context.createMarshaller();
-            marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
-
-            KontaktyWrapper wrapper = new KontaktyWrapper();
-            wrapper.setKontakty(listaKontaktow);
-
-            marshaller.marshal(wrapper, new File(KONTAKTY_FILE_PATH));
-            System.out.println("Pomyslnie zapisano kontakty do pliku " + KONTAKTY_FILE_PATH);
-        } catch (JAXBException e) {
-            System.err.println("Blad podczas zapisu kontaktow do XML: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    public static KalendarzDane wczytajDaneZXML() {
-        KalendarzDane dane = new KalendarzDane();
-        dane.setZdarzenia(new ArrayList<>());
-        dane.setKontakty(new ArrayList<>());
-
-        try {
-            File zdarzeniaFile = new File(ZDARZENIA_FILE_PATH);
-            if (zdarzeniaFile.exists()) {
-                JAXBContext context = JAXBContext.newInstance(ZdarzeniaWrapper.class);
-                Unmarshaller unmarshaller = context.createUnmarshaller();
-                ZdarzeniaWrapper zdarzeniaWrapper = (ZdarzeniaWrapper) unmarshaller.unmarshal(zdarzeniaFile);
-                if (zdarzeniaWrapper.getZdarzenia() != null) {
-                    dane.getZdarzenia().addAll(zdarzeniaWrapper.getZdarzenia());
-                }
-            }
-        } catch (JAXBException e) {
-            System.err.println("Blad podczas wczytywania zdarzen z XML: " + e.getMessage());
-            e.printStackTrace();
-        }
-
-        try {
-            File kontaktyFile = new File(KONTAKTY_FILE_PATH);
-            if (kontaktyFile.exists()) {
-                JAXBContext context = JAXBContext.newInstance(KontaktyWrapper.class);
-                Unmarshaller unmarshaller = context.createUnmarshaller();
-                KontaktyWrapper kontaktyWrapper = (KontaktyWrapper) unmarshaller.unmarshal(kontaktyFile);
-                if (kontaktyWrapper.getKontakty() != null) {
-                    dane.getKontakty().addAll(kontaktyWrapper.getKontakty());
-                }
-            }
-        } catch (JAXBException e) {
-            System.err.println("Blad podczas wczytywania kontaktow z XML: " + e.getMessage());
-            e.printStackTrace();
-        }
-
-        if (dane.getZdarzenia().isEmpty() && dane.getKontakty().isEmpty()) {
-            return null;
-        }
-
-        return dane;
     }
 }
