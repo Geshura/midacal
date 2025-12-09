@@ -19,7 +19,8 @@ import com.google.i18n.phonenumbers.PhoneNumberUtil;
 
 public class Main {
 
-    private static final String DATA_FILE_PATH = "kalendarz.xml";
+    private static final String ZDARZENIA_FILE_PATH = "zdarzenia.xml";
+    private static final String KONTAKTY_FILE_PATH = "kontakty.xml";
     private static int xmlSaveCounter = 0;
     private static final int BACKUP_INTERVAL = 10; // liczba zapisow XML przed backupem do DB
 
@@ -58,7 +59,7 @@ public class Main {
                     listaKontaktow.addAll(wrapper.getKontakty());
                 }
                 if (!listaKontaktow.isEmpty() || !listaZdarzen.isEmpty()) {
-                    System.out.println("Wczytano dane z pliku " + DATA_FILE_PATH + " (" + listaKontaktow.size() + " kontaktow, " + listaZdarzen.size() + " zdarzen)");
+                    System.out.println("Wczytano dane z plików " + ZDARZENIA_FILE_PATH + " i " + KONTAKTY_FILE_PATH + " (" + listaKontaktow.size() + " kontaktow, " + listaZdarzen.size() + " zdarzen)");
                     // Synchronizuj wczytane dane do bazy
                     DBHelper.syncAllToDB(listaKontaktow, listaZdarzen);
                 }
@@ -214,12 +215,13 @@ public class Main {
     }
 
     private static void wczytajPlikTestowy(List<Zdarzenie> listaZdarzen, List<Kontakt> listaKontaktow) {
-        File testFile = new File(DATA_FILE_PATH);
-        
-        // Sprawdź czy plik już istnieje
-        if (testFile.exists()) {
-            System.out.println("Plik testowy juz istnieje!");
-            System.out.println("Aby stworzyc nowy plik, najpierw usun: " + DATA_FILE_PATH);
+        File testFileZdarzenia = new File(ZDARZENIA_FILE_PATH);
+        File testFileKontakty = new File(KONTAKTY_FILE_PATH);
+
+        // Sprawdź czy pliki już istnieją
+        if (testFileZdarzenia.exists() || testFileKontakty.exists()) {
+            System.out.println("Pliki testowe juz istnieja!");
+            System.out.println("Aby stworzyc nowe pliki, najpierw usun: " + ZDARZENIA_FILE_PATH + " i " + KONTAKTY_FILE_PATH);
             return;
         }
         
@@ -237,9 +239,9 @@ public class Main {
         // Zapisz dane testowe do pliku XML (bez synchronizacji do bazy)
         zapiszDaneDoXML(listaZdarzen, listaKontaktow);
         
-        System.out.println("Plik testowy stworzony pomyslnie!");
+        System.out.println("Pliki testowe stworzone pomyslnie!");
         System.out.println("Stworzono " + listaKontaktow.size() + " kontaktow i " + listaZdarzen.size() + " zdarzen.");
-        System.out.println("Dane zapisane do: " + DATA_FILE_PATH);
+        System.out.println("Dane zapisane do: " + ZDARZENIA_FILE_PATH + " i " + KONTAKTY_FILE_PATH);
     }
 
     private static void menuSortowaniaKontakty(List<Kontakt> listaKontaktow, Scanner scanner) {
@@ -738,51 +740,95 @@ public class Main {
     }
 
     public static void zapiszDaneDoXML(List<Zdarzenie> listaZdarzen, List<Kontakt> listaKontaktow) {
+        zapiszZdarzeniaDoXML(listaZdarzen);
+        zapiszKontaktyDoXML(listaKontaktow);
+
+        // Inkremencja licznika zapisu XML i opcjonalny backup do bazy co BACKUP_INTERVAL zapisow
+        xmlSaveCounter++;
+        if (xmlSaveCounter >= BACKUP_INTERVAL) {
+            System.out.println("Automatyczny backup: synchronizacja danych XML do bazy danych...");
+            try {
+                DBHelper.syncAllToDB(listaKontaktow, listaZdarzen);
+            } catch (Exception e) {
+                System.err.println("Blad podczas backupu do DB: " + e.getMessage());
+            }
+            xmlSaveCounter = 0;
+        }
+    }
+
+    public static void zapiszZdarzeniaDoXML(List<Zdarzenie> listaZdarzen) {
         try {
-            JAXBContext context = JAXBContext.newInstance(KalendarzDane.class);
+            JAXBContext context = JAXBContext.newInstance(ZdarzeniaWrapper.class);
             Marshaller marshaller = context.createMarshaller();
             marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
 
-            KalendarzDane wrapper = new KalendarzDane();
+            ZdarzeniaWrapper wrapper = new ZdarzeniaWrapper();
             wrapper.setZdarzenia(listaZdarzen);
+
+            marshaller.marshal(wrapper, new File(ZDARZENIA_FILE_PATH));
+            System.out.println("Pomyslnie zapisano zdarzenia do pliku " + ZDARZENIA_FILE_PATH);
+        } catch (JAXBException e) {
+            System.err.println("Blad podczas zapisu zdarzen do XML: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    public static void zapiszKontaktyDoXML(List<Kontakt> listaKontaktow) {
+        try {
+            JAXBContext context = JAXBContext.newInstance(KontaktyWrapper.class);
+            Marshaller marshaller = context.createMarshaller();
+            marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
+
+            KontaktyWrapper wrapper = new KontaktyWrapper();
             wrapper.setKontakty(listaKontaktow);
 
-            marshaller.marshal(wrapper, new File(DATA_FILE_PATH));
-            System.out.println("Pomyslnie zapisano dane do pliku " + DATA_FILE_PATH);
-            
-            // Inkremencja licznika zapisu XML i opcjonalny backup do bazy co BACKUP_INTERVAL zapisow
-            xmlSaveCounter++;
-            if (xmlSaveCounter >= BACKUP_INTERVAL) {
-                System.out.println("Automatyczny backup: synchronizacja danych XML do bazy danych...");
-                try {
-                    DBHelper.syncAllToDB(listaKontaktow, listaZdarzen);
-                } catch (Exception e) {
-                    System.err.println("Blad podczas backupu do DB: " + e.getMessage());
-                }
-                xmlSaveCounter = 0;
-            }
+            marshaller.marshal(wrapper, new File(KONTAKTY_FILE_PATH));
+            System.out.println("Pomyslnie zapisano kontakty do pliku " + KONTAKTY_FILE_PATH);
         } catch (JAXBException e) {
-            System.err.println("Blad podczas zapisu danych do XML: " + e.getMessage());
+            System.err.println("Blad podczas zapisu kontaktow do XML: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
     public static KalendarzDane wczytajDaneZXML() {
+        KalendarzDane dane = new KalendarzDane();
+        dane.setZdarzenia(new ArrayList<>());
+        dane.setKontakty(new ArrayList<>());
+
         try {
-            File file = new File(DATA_FILE_PATH);
-            if (!file.exists()) {
-                return null;
+            File zdarzeniaFile = new File(ZDARZENIA_FILE_PATH);
+            if (zdarzeniaFile.exists()) {
+                JAXBContext context = JAXBContext.newInstance(ZdarzeniaWrapper.class);
+                Unmarshaller unmarshaller = context.createUnmarshaller();
+                ZdarzeniaWrapper zdarzeniaWrapper = (ZdarzeniaWrapper) unmarshaller.unmarshal(zdarzeniaFile);
+                if (zdarzeniaWrapper.getZdarzenia() != null) {
+                    dane.getZdarzenia().addAll(zdarzeniaWrapper.getZdarzenia());
+                }
             }
-
-            JAXBContext context = JAXBContext.newInstance(KalendarzDane.class);
-            Unmarshaller unmarshaller = context.createUnmarshaller();
-
-            return (KalendarzDane) unmarshaller.unmarshal(file);
-
         } catch (JAXBException e) {
-            System.err.println("Blad podczas wczytywania danych z XML: " + e.getMessage());
+            System.err.println("Blad podczas wczytywania zdarzen z XML: " + e.getMessage());
             e.printStackTrace();
+        }
+
+        try {
+            File kontaktyFile = new File(KONTAKTY_FILE_PATH);
+            if (kontaktyFile.exists()) {
+                JAXBContext context = JAXBContext.newInstance(KontaktyWrapper.class);
+                Unmarshaller unmarshaller = context.createUnmarshaller();
+                KontaktyWrapper kontaktyWrapper = (KontaktyWrapper) unmarshaller.unmarshal(kontaktyFile);
+                if (kontaktyWrapper.getKontakty() != null) {
+                    dane.getKontakty().addAll(kontaktyWrapper.getKontakty());
+                }
+            }
+        } catch (JAXBException e) {
+            System.err.println("Blad podczas wczytywania kontaktow z XML: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        if (dane.getZdarzenia().isEmpty() && dane.getKontakty().isEmpty()) {
             return null;
         }
+
+        return dane;
     }
 }
