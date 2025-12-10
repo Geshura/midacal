@@ -16,9 +16,6 @@ import com.google.i18n.phonenumbers.NumberParseException;
 public class DBHelper {
     private static final String DB_URL = "jdbc:sqlite:midacal.db";
     
-    // USUNIĘTO: public static final String ZDARZENIA_FILE = "zdarzenia.xml";
-    // USUNIĘTO: public static final String KONTAKTY_FILE = "kontakty.xml";
-
     public static Connection getConnection() throws SQLException {
         return DriverManager.getConnection(DB_URL);
     }

@@ -8,8 +8,8 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnore; 
 import com.fasterxml.jackson.annotation.JsonProperty; 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize; // Nowy import
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize; // Nowy import
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 public class Kontakt implements Comparable<Kontakt>{
     private static int nextId = 1;

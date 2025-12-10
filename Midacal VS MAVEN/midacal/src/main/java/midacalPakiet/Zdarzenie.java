@@ -7,16 +7,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonProperty; 
-import com.fasterxml.jackson.annotation.JsonFormat; // Nowy Import
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 public class Zdarzenie implements Comparable<Zdarzenie>{
     private static int nextId = 1;
     private int id;
 	private String nazwa;
     
-    // KLUCZOWA POPRAWKA 1: Użycie @JsonFormat, aby jawnie określić format zapisu.
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
-    // KLUCZOWA POPRAWKA 2: Dodajemy @JsonProperty nad polem, aby wymusić serializację TYLKO tego pola
+
     @JsonProperty("data")
 	private LocalDate data;
 		

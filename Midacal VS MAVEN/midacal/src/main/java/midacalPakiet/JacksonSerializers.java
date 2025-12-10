@@ -14,10 +14,6 @@ import com.google.i18n.phonenumbers.NumberParseException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.AddressException;
 
-/**
- * Klasa zbierająca statyczne wewnętrzne klasy implementujące Jackson JsonSerializer/JsonDeserializer 
- * dla typów, które Jackson domyślnie serializuje nieprawidłowo (PhoneNumber, InternetAddress).
- */
 public class JacksonSerializers {
 
     // --- Serializacja/Deserializacja PhoneNumber ---

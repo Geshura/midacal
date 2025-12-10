@@ -3,10 +3,6 @@ package midacalPakiet;
 import java.util.Comparator;
 import java.net.URI;
 
-/**
- * Klasa pomocnicza zawierająca statyczne instancje Comparatorów 
- * do sortowania obiektów Zdarzenie i Kontakt według różnych kryteriów.
- */
 public class Sortowanie {
 
     // --- Sortowanie Zdarzeń (Zdarzenie) ---
