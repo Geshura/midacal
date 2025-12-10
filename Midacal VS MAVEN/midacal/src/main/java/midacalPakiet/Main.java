@@ -36,10 +36,6 @@ public class Main {
         XML_MAPPER.enable(SerializationFeature.INDENT_OUTPUT);
     }
     
-    // ==========================================================
-    // Wewnętrzne statyczne klasy Wrapperów (zastępują KontaktyWrapper.java i ZdarzeniaWrapper.java)
-    // ==========================================================
-    
     @JacksonXmlRootElement(localName = "kontakty")
     public static class KontaktyWrapperInternal {
         @JacksonXmlElementWrapper(useWrapping = false) 
