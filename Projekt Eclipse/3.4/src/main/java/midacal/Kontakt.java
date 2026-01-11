@@ -12,7 +12,6 @@ public class Kontakt implements Serializable, Comparable<Kontakt> {
     private PhoneNumber numerTelefonu;
     private InternetAddress email;
 
-    public Kontakt() {}
     public Kontakt(String imie, String nazwisko, PhoneNumber numerTelefonu, InternetAddress email) {
         this.imie = imie;
         this.nazwisko = nazwisko;
@@ -21,13 +20,9 @@ public class Kontakt implements Serializable, Comparable<Kontakt> {
     }
 
     public String getImie() { return imie; }
-    public void setImie(String imie) { this.imie = imie; }
     public String getNazwisko() { return nazwisko; }
-    public void setNazwisko(String nazwisko) { this.nazwisko = nazwisko; }
     public PhoneNumber getNumerTelefonu() { return numerTelefonu; }
-    public void setNumerTelefonu(PhoneNumber numerTelefonu) { this.numerTelefonu = numerTelefonu; }
     public InternetAddress getEmail() { return email; }
-    public void setEmail(InternetAddress email) { this.email = email; }
 
     @Override
     public int compareTo(Kontakt inny) {

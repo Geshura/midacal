@@ -13,6 +13,7 @@ import jakarta.mail.internet.InternetAddress;
 public class Main {
     private static KalendarzManager manager = new KalendarzManager();
     private static Scanner scanner = new Scanner(System.in);
+    // Używamy FORMATTERA w metodzie dodawania, żeby zniknął warning
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     public static class KalendarzManager {
@@ -28,15 +29,15 @@ public class Main {
         generujDane();
         boolean run = true;
         while (run) {
-            System.out.println("\n1. Lista | 2. Dodaj | 3. Sortuj | 0. Wyjście");
+            System.out.println("\n1. Lista | 2. Dodaj Zdarzenie | 3. Sortuj | 0. Wyjście");
             String w = scanner.nextLine();
             switch (w) {
                 case "1" -> wyswietl();
-                case "2" -> dodajKontaktInterfejs();
+                case "2" -> dodajZdarzenieInterfejs();
                 case "3" -> {
                     Collections.sort(manager.getKontakty());
                     Collections.sort(manager.getZdarzenia());
-                    System.out.println("Posortowano domyślnie.");
+                    System.out.println("Posortowano.");
                 }
                 case "0" -> run = false;
             }
@@ -50,20 +51,16 @@ public class Main {
         manager.getZdarzenia().forEach(System.out::println);
     }
 
-    private static void dodajKontaktInterfejs() {
+    private static void dodajZdarzenieInterfejs() {
         try {
-            System.out.print("Imię: "); String i = scanner.nextLine();
-            System.out.print("Nazwisko: "); String n = scanner.nextLine();
-            System.out.print("Tel: "); String t = scanner.nextLine();
-            System.out.print("Email: "); String e = scanner.nextLine();
+            System.out.print("Tytuł: "); String t = scanner.nextLine();
+            System.out.print("Opis: "); String o = scanner.nextLine();
+            System.out.print("Data (yyyy-MM-dd HH:mm): "); String d = scanner.nextLine();
+            System.out.print("Link: "); String l = scanner.nextLine();
             
-            var pu = PhoneNumberUtil.getInstance();
-            var mail = new InternetAddress(e);
-            mail.validate();
-            
-            manager.dodajKontakt(new Kontakt(i, n, pu.parse(t, "PL"), mail));
+            manager.dodajZdarzenie(new Zdarzenie(t, o, LocalDateTime.parse(d, FORMATTER), URI.create(l).toURL()));
             System.out.println("Dodano.");
-        } catch (Exception ex) { System.out.println("Błąd danych!"); }
+        } catch (Exception ex) { System.out.println("Błąd formatu danych!"); }
     }
 
     private static void generujDane() {
@@ -71,8 +68,7 @@ public class Main {
             var pu = PhoneNumberUtil.getInstance();
             for (int i = 1; i <= 10; i++) {
                 manager.dodajKontakt(new Kontakt("Jan"+i, "Kowalski"+i, pu.parse("50000000"+i, "PL"), new InternetAddress("test"+i+"@midacal.pl")));
-                // Użycie URI.create().toURL() naprawia ostrzeżenie z Twojego zdjęcia
-                manager.dodajZdarzenie(new Zdarzenie("Spotkanie "+i, "Opis", LocalDateTime.now().plusDays(i), 
+                manager.dodajZdarzenie(new Zdarzenie("Spotkanie "+i, "Opis "+i, LocalDateTime.now().plusDays(i), 
                         URI.create("http://link"+i+".pl").toURL()));
             }
         } catch (Exception e) {}

@@ -12,7 +12,6 @@ public class Zdarzenie implements Serializable, Comparable<Zdarzenie> {
     private LocalDateTime data;
     private URL miejsce;
 
-    public Zdarzenie() {}
     public Zdarzenie(String tytul, String opis, LocalDateTime data, URL miejsce) {
         this.tytul = tytul;
         this.opis = opis;
@@ -21,9 +20,7 @@ public class Zdarzenie implements Serializable, Comparable<Zdarzenie> {
     }
 
     public String getTytul() { return tytul; }
-    public void setTytul(String tytul) { this.tytul = tytul; }
     public LocalDateTime getData() { return data; }
-    public void setData(LocalDateTime data) { this.data = data; }
 
     @Override
     public int compareTo(Zdarzenie inne) {
@@ -39,6 +36,6 @@ public class Zdarzenie implements Serializable, Comparable<Zdarzenie> {
 
     @Override
     public String toString() {
-        return String.format("[%s] %-20s | Link: %s", data, tytul, miejsce);
+        return String.format("[%s] %-20s | Opis: %-15s | Link: %s", data, tytul, opis, miejsce);
     }
 }
