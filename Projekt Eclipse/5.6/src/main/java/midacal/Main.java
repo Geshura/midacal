@@ -101,13 +101,15 @@ public class Main {
             return;
         }
         while (true) {
-            System.out.println("\n[WYŚWIETL]: 1. Wszystko | 2. Kontakty | 3. Zdarzenia | X. Wstecz");
+            System.out.println("\n[WYŚWIETL]: 1. Wszystko | 2. Kontakty | 3. Zdarzenia | 4. Kontakty→Zdarzenia | 5. Zdarzenia→Kontakty | X. Wstecz");
             String c = sc.nextLine().toUpperCase();
             if (c.equals("X")) return;
             switch (c) {
                 case "1" -> { showKontakty(); showZdarzenia(); }
                 case "2" -> showKontakty();
                 case "3" -> showZdarzenia();
+                case "4" -> showKontaktyWithZdarzenia();
+                case "5" -> showZdarzeniaWithKontakty();
             }
         }
     }
@@ -292,6 +294,40 @@ public class Main {
         System.out.println("\n--- ZDARZENIA ---");
         if (appMemory.zdarzenia.isEmpty()) System.out.println("(lista pusta)");
         else for (int i = 0; i < appMemory.zdarzenia.size(); i++) System.out.println("[" + i + "] " + appMemory.zdarzenia.get(i));
+    }
+
+    private static void showKontaktyWithZdarzenia() {
+        System.out.println("\n--- KONTAKTY → ZDARZENIA ---");
+        if (appMemory.kontakty.isEmpty()) { System.out.println("(lista kontaktów pusta)"); return; }
+        for (int i = 0; i < appMemory.kontakty.size(); i++) {
+            Kontakt k = appMemory.kontakty.get(i);
+            System.out.println("[" + i + "] " + k);
+            List<Zdarzenie> list = k.getZdarzenia();
+            if (list == null || list.isEmpty()) {
+                System.out.println("   — brak zdarzeń");
+            } else {
+                for (Zdarzenie z : list) {
+                    System.out.println("   • [" + z.getData() + "] " + z.getTytul());
+                }
+            }
+        }
+    }
+
+    private static void showZdarzeniaWithKontakty() {
+        System.out.println("\n--- ZDARZENIA → KONTAKTY ---");
+        if (appMemory.zdarzenia.isEmpty()) { System.out.println("(lista zdarzeń pusta)"); return; }
+        for (int i = 0; i < appMemory.zdarzenia.size(); i++) {
+            Zdarzenie z = appMemory.zdarzenia.get(i);
+            System.out.println("[" + i + "] " + z);
+            List<Kontakt> list = z.getKontakty();
+            if (list == null || list.isEmpty()) {
+                System.out.println("   — brak uczestników");
+            } else {
+                for (Kontakt k : list) {
+                    System.out.println("   • " + k.getNazwisko() + " " + k.getImie());
+                }
+            }
+        }
     }
 
     private static void performDelete(String type) {
