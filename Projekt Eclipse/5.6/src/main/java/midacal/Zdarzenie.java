@@ -3,15 +3,21 @@ package midacal;
 import java.io.Serializable;
 import java.net.URL;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class Zdarzenie implements Serializable, Comparable<Zdarzenie> {
     private static final long serialVersionUID = 1L;
+    private Long id;
     @JsonProperty("tytul") private String tytul;
     @JsonProperty("opis") private String opis;
     @JsonProperty("data") private LocalDate data;
     @JsonProperty("link") private URL miejsce;
+    @JsonIgnore private List<Kontakt> kontakty = new ArrayList<>();
 
     public Zdarzenie() {}
     public Zdarzenie(String tytul, String opis, LocalDate data, URL miejsce) {
@@ -20,6 +26,13 @@ public class Zdarzenie implements Serializable, Comparable<Zdarzenie> {
         this.data = data;
         this.miejsce = miejsce;
     }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public List<Kontakt> getKontakty() { return kontakty; }
+    public void setKontakty(List<Kontakt> kontakty) { this.kontakty = kontakty; }
+    public void dodajKontakt(Kontakt k) { if (!kontakty.contains(k)) kontakty.add(k); }
+    public void usunKontakt(Kontakt k) { kontakty.remove(k); }
 
     public String getTytul() { return tytul; }
     public void setTytul(String t) { this.tytul = t; }

@@ -1,19 +1,25 @@
 package midacal;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
+
 import jakarta.mail.internet.InternetAddress;
 
 public class Kontakt implements Serializable, Comparable<Kontakt> {
     private static final long serialVersionUID = 1L;
+    private Long id;
     private String imie;
     private String nazwisko;
     @JsonIgnore private PhoneNumber numerTelefonu;
     @JsonIgnore private InternetAddress email;
+    @JsonIgnore private List<Zdarzenie> zdarzenia = new ArrayList<>();
 
     public Kontakt() {}
     public Kontakt(String imie, String nazwisko, PhoneNumber numer, InternetAddress email) {
@@ -22,6 +28,13 @@ public class Kontakt implements Serializable, Comparable<Kontakt> {
         this.numerTelefonu = numer;
         this.email = email;
     }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public List<Zdarzenie> getZdarzenia() { return zdarzenia; }
+    public void setZdarzenia(List<Zdarzenie> zdarzenia) { this.zdarzenia = zdarzenia; }
+    public void dodajZdarzenie(Zdarzenie z) { if (!zdarzenia.contains(z)) zdarzenia.add(z); }
+    public void usunZdarzenie(Zdarzenie z) { zdarzenia.remove(z); }
 
     @JsonProperty("imie") public String getImie() { return imie; }
     public void setImie(String imie) { this.imie = imie; }
