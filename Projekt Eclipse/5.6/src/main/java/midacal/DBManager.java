@@ -19,7 +19,7 @@ import java.util.Map;
  * Relacja wiele-do-wielu poprzez tabelę asocjacyjną kontakty_zdarzenia
  */
 public class DBManager {
-    private static final String DB_URL = "jdbc:sqlite:midacal.db";
+    private static final String DB_URL = "jdbc:sqlite:midacalDB.db";
     private Connection connection;
     
     // === KONSTRUKTOR I POŁĄCZENIE ===
