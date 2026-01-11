@@ -1,0 +1,146 @@
+<MemoryContainer>
+  <kontakty>
+    <kontakty>
+      <id/>
+      <imie>Adam</imie>
+      <nazwisko>Mickiewicz</nazwisko>
+      <telefon>501111222</telefon>
+      <email>adam@wieszcz.pl</email>
+    </kontakty>
+    <kontakty>
+      <id/>
+      <imie>Juliusz</imie>
+      <nazwisko>Słowacki</nazwisko>
+      <telefon>602222333</telefon>
+      <email>julek@balladyna.pl</email>
+    </kontakty>
+    <kontakty>
+      <id/>
+      <imie>Iga</imie>
+      <nazwisko>Świątek</nazwisko>
+      <telefon>703333444</telefon>
+      <email>iga@sport.pl</email>
+    </kontakty>
+    <kontakty>
+      <id/>
+      <imie>Robert</imie>
+      <nazwisko>Lewandowski</nazwisko>
+      <telefon>804444555</telefon>
+      <email>rl9@lewy.pl</email>
+    </kontakty>
+    <kontakty>
+      <id/>
+      <imie>Janusz</imie>
+      <nazwisko>Gajos</nazwisko>
+      <telefon>505555666</telefon>
+      <email>janusz@aktor.pl</email>
+    </kontakty>
+    <kontakty>
+      <id/>
+      <imie>Beata</imie>
+      <nazwisko>Kozidrak</nazwisko>
+      <telefon>606666777</telefon>
+      <email>beata@bajm.pl</email>
+    </kontakty>
+    <kontakty>
+      <id/>
+      <imie>Fryderyk</imie>
+      <nazwisko>Chopin</nazwisko>
+      <telefon>707777888</telefon>
+      <email>frycek@piano.pl</email>
+    </kontakty>
+    <kontakty>
+      <id/>
+      <imie>Maria</imie>
+      <nazwisko>Skłodowska</nazwisko>
+      <telefon>808888999</telefon>
+      <email>maria@rad.pl</email>
+    </kontakty>
+    <kontakty>
+      <id/>
+      <imie>Wisława</imie>
+      <nazwisko>Szymborska</nazwisko>
+      <telefon>509999000</telefon>
+      <email>wisla@poezja.pl</email>
+    </kontakty>
+    <kontakty>
+      <id/>
+      <imie>Mikołaj</imie>
+      <nazwisko>Kopernik</nazwisko>
+      <telefon>610123456</telefon>
+      <email>mikolaj@niebo.pl</email>
+    </kontakty>
+  </kontakty>
+  <zdarzenia>
+    <zdarzenia>
+      <id/>
+      <tytul>Finał RG</tytul>
+      <opis>Mecz tenisowy</opis>
+      <data>2026-06-08</data>
+      <link>https://rg.fr</link>
+    </zdarzenia>
+    <zdarzenia>
+      <id/>
+      <tytul>Premiera</tytul>
+      <opis>Nowy kryminał</opis>
+      <data>2026-03-15</data>
+      <link>https://kino.pl</link>
+    </zdarzenia>
+    <zdarzenia>
+      <id/>
+      <tytul>Zjazd</tytul>
+      <opis>Spotkanie klasowe</opis>
+      <data>2026-09-20</data>
+      <link>https://u.pl</link>
+    </zdarzenia>
+    <zdarzenia>
+      <id/>
+      <tytul>Bajm</tytul>
+      <opis>Koncert jubileuszowy</opis>
+      <data>2026-11-05</data>
+      <link>https://ticket.pl</link>
+    </zdarzenia>
+    <zdarzenia>
+      <id/>
+      <tytul>Lekarz</tytul>
+      <opis>Kontrola roczna</opis>
+      <data>2026-02-10</data>
+      <link>https://med.pl</link>
+    </zdarzenia>
+    <zdarzenia>
+      <id/>
+      <tytul>Urlop</tytul>
+      <opis>Narty w Alpach</opis>
+      <data>2026-01-15</data>
+      <link>https://travel.pl</link>
+    </zdarzenia>
+    <zdarzenia>
+      <id/>
+      <tytul>Egzamin</tytul>
+      <opis>Java JDK 25</opis>
+      <data>2026-01-30</data>
+      <link>https://oracle.com</link>
+    </zdarzenia>
+    <zdarzenia>
+      <id/>
+      <tytul>Warsztaty</tytul>
+      <opis>Kuchnia azjatycka</opis>
+      <data>2026-05-12</data>
+      <link>https://food.pl</link>
+    </zdarzenia>
+    <zdarzenia>
+      <id/>
+      <tytul>Serwis</tytul>
+      <opis>Auto - olej</opis>
+      <data>2026-04-01</data>
+      <link>https://aso.pl</link>
+    </zdarzenia>
+    <zdarzenia>
+      <id/>
+      <tytul>Urodziny</tytul>
+      <opis>Impreza domowa</opis>
+      <data>2026-08-25</data>
+      <link>https://fb.com</link>
+    </zdarzenia>
+  </zdarzenia>
+</MemoryContainer>
