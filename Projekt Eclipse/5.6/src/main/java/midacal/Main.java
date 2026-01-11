@@ -22,8 +22,8 @@ public class Main {
     private static final String APP_NAME = "KALENDARZ MIDACAL";
     private static final Scanner sc = new Scanner(System.in);
     private static final DBManager dbManager = new DBManager();
-    private static int xmlSaveCounter = 0;
-    private static final int BACKUP_INTERVAL = 10; // Co 10 zapisów do XML -> backup do DB
+    private static int changeCounter = 0;
+    private static final int CHANGE_INTERVAL = 10; // Co 10 zmian w RAM -> backup do DB
 
     public static class MemoryContainer {
         public List<Kontakt> kontakty = new ArrayList<>();
@@ -196,6 +196,7 @@ public class Main {
                 if (a.equals("1") || a.equals("4")) { System.out.print("Nowy numer: "); k.setTelStr(sc.nextLine()); }
                 if (a.equals("1") || a.equals("5")) { System.out.print("Nowy e-mail: "); k.setEmailStr(sc.nextLine()); }
                 System.out.println("[OK] Zaktualizowano pomyślnie.");
+                markChanged();
             }
         } catch (Exception e) { System.out.println("[X] Błąd indeksu."); }
     }
@@ -228,6 +229,7 @@ public class Main {
                 if (a.equals("1") || a.equals("4")) { System.out.print("Nowa data (RRRR-MM-DD): "); z.setData(LocalDate.parse(sc.nextLine())); }
                 if (a.equals("1") || a.equals("5")) { System.out.print("Nowy link: "); try { z.setMiejsce(URI.create(sc.nextLine()).toURL()); } catch(Exception e){} }
                 System.out.println("[OK] Zaktualizowano pomyślnie.");
+                markChanged();
             }
         } catch (Exception e) { System.out.println("[X] Błąd danych."); }
     }
@@ -246,6 +248,7 @@ public class Main {
                     } else {
                         appMemory.kontakty.clear(); appMemory.zdarzenia.clear();
                         System.out.println("[OK] Pamięć RAM została wyczyszczona.");
+                        markChanged();
                     }
                 }
             } else if (c.equals("2")) {
@@ -302,6 +305,7 @@ public class Main {
                 if (type.equals("1")) appMemory.kontakty.remove(idx);
                 else appMemory.zdarzenia.remove(idx);
                 System.out.println("[OK] Rekord został usunięty.");
+                markChanged();
             }
         } catch (Exception e) { System.out.println("[X] Błąd indeksu."); }
     }
@@ -318,14 +322,6 @@ public class Main {
             m.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
             m.writeValue(new File(FILE_PATH), appMemory);
             System.out.println("[OK] Dane zostały zapisane do pliku " + FILE_PATH);
-            
-            // Backup do bazy co X zapisów
-            xmlSaveCounter++;
-            if (xmlSaveCounter >= BACKUP_INTERVAL) {
-                System.out.println("[BACKUP] Wykonywanie automatycznego backupu do bazy danych...");
-                dbManager.saveToDatabase(appMemory);
-                xmlSaveCounter = 0;
-            }
         } catch (Exception e) { e.printStackTrace(); }
     }
 
@@ -352,6 +348,7 @@ public class Main {
             System.out.print("E-mail: "); String e = sc.nextLine();
             appMemory.kontakty.add(new Kontakt(i, n, PhoneNumberUtil.getInstance().parse(t, "PL"), new InternetAddress(e)));
             System.out.println("[OK] Kontakt dodany.");
+            markChanged();
         } catch (Exception ex) { System.out.println("[X] Błąd formatu danych."); }
     }
 
@@ -364,6 +361,7 @@ public class Main {
             System.out.print("Link: "); URL u = URI.create(sc.nextLine()).toURL();
             appMemory.zdarzenia.add(new Zdarzenie(t, o, d, u));
             System.out.println("[OK] Zdarzenie dodane.");
+            markChanged();
         } catch (Exception ex) { System.out.println("[X] Błąd formatu danych."); }
     }
 
@@ -393,5 +391,18 @@ public class Main {
             appMemory.zdarzenia.add(new Zdarzenie("Urodziny", "Impreza domowa", LocalDate.of(2026, 8, 25), URI.create("https://fb.com").toURL()));
             System.out.println("[OK] Pomyślnie załadowano 20 rekordów testowych.");
         } catch (Exception e) {}
+    }
+
+    private static void markChanged() {
+        incrementChanges(1);
+    }
+
+    private static void incrementChanges(int n) {
+        changeCounter += Math.max(0, n);
+        if (changeCounter >= CHANGE_INTERVAL) {
+            System.out.println("[AUTO] Backup do bazy po " + changeCounter + " zmianach w RAM...");
+            dbManager.saveToDatabase(appMemory);
+            changeCounter = 0;
+        }
     }
 }
