@@ -14,7 +14,6 @@ public class Zdarzenie implements Serializable, Comparable<Zdarzenie> {
     @JsonProperty("data") private LocalDate data;
     @JsonProperty("link") private URL miejsce;
     
-    // NOWE POLE: Lista kontaktów biorących udział w zdarzeniu
     @JsonIgnore private List<Kontakt> listaUczestnikow = new ArrayList<>();
 
     public Zdarzenie() {}
@@ -38,7 +37,7 @@ public class Zdarzenie implements Serializable, Comparable<Zdarzenie> {
     public void dodajUczestnika(Kontakt k) { 
         if (!listaUczestnikow.contains(k)) {
             listaUczestnikow.add(k);
-            k.dodajZdarzenie(this); // Obustronne powiązanie (ORM logic)
+            k.dodajZdarzenie(this);
         }
     }
 

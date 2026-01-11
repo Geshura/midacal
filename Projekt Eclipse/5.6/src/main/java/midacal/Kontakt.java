@@ -15,7 +15,6 @@ public class Kontakt implements Serializable, Comparable<Kontakt> {
     @JsonIgnore private PhoneNumber numerTelefonu;
     @JsonIgnore private InternetAddress email;
     
-    // NOWE POLE: Lista zdarzeń, w których kontakt bierze udział
     @JsonIgnore private List<Zdarzenie> udzialWZdarzeniach = new ArrayList<>();
 
     public Kontakt() {}
@@ -66,7 +65,7 @@ public class Kontakt implements Serializable, Comparable<Kontakt> {
 
     @Override
     public String toString() {
-        return String.format("%-15s %-15s | Tel: %-10s | Email: %s | Zdarzenia: %d", 
+        return String.format("%-15s %-15s | Tel: %-10s | Email: %-20s | Udział w: %d", 
                 nazwisko, imie, getTelStr(), getEmailStr(), udzialWZdarzeniach.size());
     }
 }
