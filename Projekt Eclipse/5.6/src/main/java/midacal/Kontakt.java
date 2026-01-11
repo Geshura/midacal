@@ -1,7 +1,7 @@
 package midacal;
 
 import java.io.Serializable;
-import java.util.*;
+import java.util.Comparator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
@@ -14,9 +14,6 @@ public class Kontakt implements Serializable, Comparable<Kontakt> {
     private String nazwisko;
     @JsonIgnore private PhoneNumber numerTelefonu;
     @JsonIgnore private InternetAddress email;
-    
-    // ORM: Lista zdarzeń przypisanych do kontaktu
-    @JsonIgnore private List<Zdarzenie> udzialWZdarzeniach = new ArrayList<>();
 
     public Kontakt() {}
     public Kontakt(String imie, String nazwisko, PhoneNumber numer, InternetAddress email) {
@@ -30,9 +27,6 @@ public class Kontakt implements Serializable, Comparable<Kontakt> {
     public void setImie(String imie) { this.imie = imie; }
     @JsonProperty("nazwisko") public String getNazwisko() { return nazwisko; }
     public void setNazwisko(String nazwisko) { this.nazwisko = nazwisko; }
-    
-    public List<Zdarzenie> getUdzialWZdarzeniach() { return udzialWZdarzeniach; }
-    public void dodajZdarzenie(Zdarzenie z) { if (!udzialWZdarzeniach.contains(z)) udzialWZdarzeniach.add(z); }
 
     @JsonProperty("telefon")
     public String getTelStr() { return numerTelefonu != null ? String.valueOf(numerTelefonu.getNationalNumber()) : ""; }
@@ -52,20 +46,20 @@ public class Kontakt implements Serializable, Comparable<Kontakt> {
         return (res == 0) ? this.imie.compareToIgnoreCase(inny.imie) : res;
     }
 
-    @Override
-    public String toString() {
-        return String.format("%-15s %-15s | Tel: %-10s | Email: %-20s | Wydarzenia: %d", 
-                nazwisko, imie, getTelStr(), getEmailStr(), udzialWZdarzeniach.size());
-    }
-
-    // Comparatory
     public static class ImieComparator implements Comparator<Kontakt> {
         @Override public int compare(Kontakt k1, Kontakt k2) { return k1.imie.compareToIgnoreCase(k2.imie); }
     }
     public static class TelComparator implements Comparator<Kontakt> {
         @Override public int compare(Kontakt k1, Kontakt k2) {
-            return Long.compare(k1.numerTelefonu != null ? k1.numerTelefonu.getNationalNumber() : 0, 
-                               k2.numerTelefonu != null ? k2.numerTelefonu.getNationalNumber() : 0);
+            return Long.compare(k1.numerTelefonu.getNationalNumber(), k2.numerTelefonu.getNationalNumber());
         }
+    }
+    public static class EmailComparator implements Comparator<Kontakt> {
+        @Override public int compare(Kontakt k1, Kontakt k2) { return k1.getEmailStr().compareToIgnoreCase(k2.getEmailStr()); }
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%-15s %-15s | Tel: %-10s | Email: %s", nazwisko, imie, getTelStr(), getEmailStr());
     }
 }
