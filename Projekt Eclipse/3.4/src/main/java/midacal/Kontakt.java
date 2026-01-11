@@ -2,15 +2,20 @@ package midacal;
 
 import java.io.Serializable;
 import java.util.Comparator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
 import jakarta.mail.internet.InternetAddress;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Kontakt implements Serializable, Comparable<Kontakt> {
     private static final long serialVersionUID = 1L;
+
     private String imie;
     private String nazwisko;
     private PhoneNumber numerTelefonu;
     private InternetAddress email;
+
+    public Kontakt() {} // Wymagany przez Jackson
 
     public Kontakt(String imie, String nazwisko, PhoneNumber numerTelefonu, InternetAddress email) {
         this.imie = imie;
@@ -19,10 +24,15 @@ public class Kontakt implements Serializable, Comparable<Kontakt> {
         this.email = email;
     }
 
+    // Gettery i Settery
     public String getImie() { return imie; }
+    public void setImie(String imie) { this.imie = imie; }
     public String getNazwisko() { return nazwisko; }
+    public void setNazwisko(String nazwisko) { this.nazwisko = nazwisko; }
     public PhoneNumber getNumerTelefonu() { return numerTelefonu; }
+    public void setNumerTelefonu(PhoneNumber numerTelefonu) { this.numerTelefonu = numerTelefonu; }
     public InternetAddress getEmail() { return email; }
+    public void setEmail(InternetAddress email) { this.email = email; }
 
     @Override
     public int compareTo(Kontakt inny) {
@@ -43,6 +53,6 @@ public class Kontakt implements Serializable, Comparable<Kontakt> {
     public String toString() {
         String telStr = (numerTelefonu != null) ? String.valueOf(numerTelefonu.getNationalNumber()) : "brak";
         String emailStr = (email != null) ? email.getAddress() : "brak";
-        return String.format("%-15s %-15s | Tel: %-12s | Email: %s", nazwisko, imie, telStr, emailStr);
+        return String.format("%-12s %-12s | Tel: %-10s | Email: %s", nazwisko, imie, telStr, emailStr);
     }
 }
