@@ -26,7 +26,9 @@ public class Zdarzenie implements Serializable, Comparable<Zdarzenie> {
     public String getOpis() { return opis; }
     public void setOpis(String o) { this.opis = o; }
     public LocalDate getData() { return data; }
+    public void setData(LocalDate d) { this.data = d; }
     public URL getMiejsce() { return miejsce; }
+    public void setMiejsce(URL m) { this.miejsce = m; }
 
     @Override
     public int compareTo(Zdarzenie inne) { return this.data.compareTo(inne.data); }
