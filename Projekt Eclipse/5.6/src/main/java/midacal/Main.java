@@ -101,7 +101,7 @@ public class Main {
             return;
         }
         while (true) {
-            System.out.println("\n[WYŚWIETL]: 1. Wszystko | 2. Kontakty | 3. Zdarzenia | 4. Kontakty→Zdarzenia | 5. Zdarzenia→Kontakty | X. Wstecz");
+            System.out.println("\n[WYŚWIETL]: 1. Wszystko | 2. Kontakty | 3. Zdarzenia | 4. Kontakty > Zdarzenia | 5. Zdarzenia > Kontakty | X. Wstecz");
             String c = sc.nextLine().toUpperCase();
             if (c.equals("X")) return;
             switch (c) {
