@@ -261,7 +261,12 @@ public class CalendarGUI extends JFrame {
         String[] dni = {"Pn", "Wt", "Śr", "Cz", "Pt", "So", "Nd"};
         for (String d : dni) {
             JLabel hdr = new JLabel(d, SwingConstants.CENTER);
-            hdr.setFont(hdr.getFont().deriveFont(Font.BOLD, calendarFontSize));
+            hdr.setFont(hdr.getFont().deriveFont(Font.BOLD, 14f));
+            hdr.setOpaque(true);
+            hdr.setBackground(new Color(51, 102, 153)); // Ciemny niebieski
+            hdr.setForeground(Color.WHITE);
+            hdr.setBorder(BorderFactory.createLineBorder(Color.DARK_GRAY, 1));
+            hdr.setPreferredSize(new Dimension(0, 35));
             calendarGrid.add(hdr);
         }
 
