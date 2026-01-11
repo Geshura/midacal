@@ -10,18 +10,12 @@ import jakarta.mail.internet.InternetAddress;
 
 public class Kontakt implements Serializable, Comparable<Kontakt> {
     private static final long serialVersionUID = 1L;
-
     private String imie;
     private String nazwisko;
-    
-    @JsonIgnore
-    private PhoneNumber numerTelefonu;
-    
-    @JsonIgnore
-    private InternetAddress email;
+    @JsonIgnore private PhoneNumber numerTelefonu;
+    @JsonIgnore private InternetAddress email;
 
-    public Kontakt() {} // Wymagany dla Jackson
-
+    public Kontakt() {}
     public Kontakt(String imie, String nazwisko, PhoneNumber numer, InternetAddress email) {
         this.imie = imie;
         this.nazwisko = nazwisko;
@@ -29,14 +23,9 @@ public class Kontakt implements Serializable, Comparable<Kontakt> {
         this.email = email;
     }
 
-    // --- MAPOWANIE DANYCH DO CZYSTEGO XML ---
-
-    @JsonProperty("imie")
-    public String getImie() { return imie; }
+    @JsonProperty("imie") public String getImie() { return imie; }
     public void setImie(String imie) { this.imie = imie; }
-
-    @JsonProperty("nazwisko")
-    public String getNazwisko() { return nazwisko; }
+    @JsonProperty("nazwisko") public String getNazwisko() { return nazwisko; }
     public void setNazwisko(String nazwisko) { this.nazwisko = nazwisko; }
 
     @JsonProperty("telefon")
@@ -57,9 +46,16 @@ public class Kontakt implements Serializable, Comparable<Kontakt> {
         return (res == 0) ? this.imie.compareToIgnoreCase(inny.imie) : res;
     }
 
-    // Komparator alternatywny (wg Imienia)
     public static class ImieComparator implements Comparator<Kontakt> {
         @Override public int compare(Kontakt k1, Kontakt k2) { return k1.imie.compareToIgnoreCase(k2.imie); }
+    }
+    public static class TelComparator implements Comparator<Kontakt> {
+        @Override public int compare(Kontakt k1, Kontakt k2) {
+            return Long.compare(k1.numerTelefonu.getNationalNumber(), k2.numerTelefonu.getNationalNumber());
+        }
+    }
+    public static class EmailComparator implements Comparator<Kontakt> {
+        @Override public int compare(Kontakt k1, Kontakt k2) { return k1.getEmailStr().compareToIgnoreCase(k2.getEmailStr()); }
     }
 
     @Override
