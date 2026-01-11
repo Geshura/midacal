@@ -72,6 +72,7 @@ public class CalendarGUI extends JFrame {
     // Dodatkowe panele
     private JPanel overviewPanel; // JSplitPane: Kontakty | Zdarzenia
     private JDesktopPane desktopPane; // InternalFrames
+    private javax.swing.JTextArea calendarDayDetailsArea; // Panel szczegółów dnia w kalendarzu
     
     public CalendarGUI(Main.MemoryContainer memory, DBManager dbMgr) {
         this.appMemory = memory;
@@ -154,9 +155,9 @@ public class CalendarGUI extends JFrame {
         overviewPanel = createOverviewPanel();
         JPanel oknaPanel = createWindowsPanel();
         
+        tabbedPane.addTab("Kalendarz", kalendarzPanel);
         tabbedPane.addTab("Kontakty", kontaktyPanel);
         tabbedPane.addTab("Zdarzenia", zdarzeniaPanel);
-        tabbedPane.addTab("Kalendarz", kalendarzPanel);
         tabbedPane.addTab("Przegląd", overviewPanel);
         tabbedPane.addTab("Okna", oknaPanel);
         
@@ -201,29 +202,41 @@ public class CalendarGUI extends JFrame {
         for (int i = 0; i <= 20; i++) lata[i] = baseYear - 10 + i;
         yearCombo = new JComboBox<>(lata);
 
-        // Slider rozmiaru czcionki siatki
-        calendarFontSlider = new JSlider(10, 20, (int) calendarFontSize);
-        calendarFontSlider.setMajorTickSpacing(5);
-        calendarFontSlider.setMinorTickSpacing(1);
-        calendarFontSlider.setPaintTicks(true);
-        calendarFontSlider.setToolTipText("Rozmiar czcionki kalendarza");
-
         leftNav.add(prevBtn);
         leftNav.add(nextBtn);
         leftNav.add(new JLabel("Miesiąc:"));
         leftNav.add(monthCombo);
         leftNav.add(new JLabel("Rok:"));
         leftNav.add(yearCombo);
-        leftNav.add(new JLabel("Czcionka:"));
-        leftNav.add(calendarFontSlider);
 
         navPanel.add(leftNav, BorderLayout.WEST);
         navPanel.add(monthLabel, BorderLayout.CENTER);
         panel.add(navPanel, BorderLayout.NORTH);
 
+        // Panel informacji o dniu (poniżej kalendarza)
+        JPanel dayDetailsPanel = new JPanel(new BorderLayout(10, 10));
+        dayDetailsPanel.setBorder(BorderFactory.createTitledBorder("Szczegóły dnia"));
+        dayDetailsPanel.setPreferredSize(new Dimension(0, 150));
+        calendarDayDetailsArea = new javax.swing.JTextArea();
+        calendarDayDetailsArea.setEditable(false);
+        calendarDayDetailsArea.setLineWrap(true);
+        calendarDayDetailsArea.setWrapStyleWord(true);
+        calendarDayDetailsArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        JScrollPane detailsScroll = new JScrollPane(calendarDayDetailsArea);
+        dayDetailsPanel.add(detailsScroll, BorderLayout.CENTER);
+
         // Siatka dni 7x7 (nagłówki dni tygodnia + maks. 6 tygodni)
-        calendarGrid = new JPanel(new GridLayout(7, 7, 5, 5));
-        panel.add(calendarGrid, BorderLayout.CENTER);
+        calendarGrid = new JPanel(new GridLayout(7, 7, 8, 8)); // Większe przerwy między kafelkami
+        calendarGrid.setBackground(new Color(250, 250, 250));
+        JScrollPane gridScroll = new JScrollPane(calendarGrid);
+        gridScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        gridScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        gridScroll.getVerticalScrollBar().setUnitIncrement(20);
+
+        JPanel centerPanel = new JPanel(new BorderLayout(10, 10));
+        centerPanel.add(gridScroll, BorderLayout.CENTER);
+        centerPanel.add(dayDetailsPanel, BorderLayout.SOUTH);
+        panel.add(centerPanel, BorderLayout.CENTER);
 
         // Inicjalizacja bieżącego miesiąca
         currentMonth = java.util.Calendar.getInstance();
@@ -234,7 +247,6 @@ public class CalendarGUI extends JFrame {
         nextBtn.addActionListener(onAction(() -> { currentMonth.add(java.util.Calendar.MONTH, 1); syncCombosFromCalendar(); fillCalendarGrid(); }));
         monthCombo.addActionListener(onAction(() -> { currentMonth.set(java.util.Calendar.MONTH, monthCombo.getSelectedIndex()); fillCalendarGrid(); }));
         yearCombo.addActionListener(onAction(() -> { currentMonth.set(java.util.Calendar.YEAR, (Integer) yearCombo.getSelectedItem()); fillCalendarGrid(); }));
-        calendarFontSlider.addChangeListener(onChange(() -> { calendarFontSize = calendarFontSlider.getValue(); fillCalendarGrid(); }));
 
         // Wypełnij siatkę po raz pierwszy
         syncCombosFromCalendar();
@@ -285,31 +297,86 @@ public class CalendarGUI extends JFrame {
         // Dni miesiąca
         java.time.LocalDate today = java.time.LocalDate.now();
         for (int day = 1; day <= daysInMonth; day++) {
-            JLabel cell = new JLabel(String.valueOf(day), SwingConstants.CENTER);
-            cell.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
-            cell.setFont(cell.getFont().deriveFont(calendarFontSize));
+            JPanel dayPanel = new JPanel(new BorderLayout());
+            dayPanel.setBorder(BorderFactory.createLineBorder(Color.DARK_GRAY, 2));
+            dayPanel.setOpaque(true);
+            dayPanel.setBackground(new Color(245, 245, 245)); // Jasne szare tło dla kafelka
+
+            JLabel dayLabel = new JLabel(String.valueOf(day), SwingConstants.CENTER);
+            dayLabel.setFont(dayLabel.getFont().deriveFont(Font.BOLD, calendarFontSize));
+            dayLabel.setForeground(Color.BLACK);
+            dayPanel.add(dayLabel, BorderLayout.NORTH);
 
             // Podświetl dzisiejszy dzień
             if (today.getYear() == y && today.getMonthValue() - 1 == m && today.getDayOfMonth() == day) {
-                cell.setOpaque(true);
-                cell.setBackground(new Color(220, 240, 255));
-                cell.setFont(cell.getFont().deriveFont(Font.BOLD));
+                dayPanel.setBackground(new Color(200, 220, 255)); // Niebieskie tło na dziś
+                dayLabel.setFont(dayLabel.getFont().deriveFont(Font.BOLD));
             }
 
-            // Oznacz dni z wydarzeniami (jeśli istnieją w pamięci)
-            boolean hasEvent = false;
+            // Zbierz zdarzenia w tym dniu i wyświetl tytuły
+            java.util.List<Zdarzenie> eventsForDay = new java.util.ArrayList<>();
             for (Zdarzenie z : appMemory.zdarzenia) {
                 java.time.LocalDate d = z.getData();
                 if (d != null && d.getYear() == y && d.getMonthValue() - 1 == m && d.getDayOfMonth() == day) {
-                    hasEvent = true; break;
+                    eventsForDay.add(z);
                 }
             }
-            if (hasEvent) {
-                cell.setForeground(eventDayColor);
-                cell.setToolTipText("Zdarzenia w tym dniu");
+
+            // Przygotuj wspólny klik dla całego kafelka
+            final int dayOfMonth = day;
+            final int yearVal = y;
+            final int monthZeroBased = m;
+            java.awt.event.MouseAdapter dayClick = new java.awt.event.MouseAdapter() {
+                @Override
+                public void mouseClicked(java.awt.event.MouseEvent e) {
+                    java.time.LocalDate date = java.time.LocalDate.of(yearVal, monthZeroBased + 1, dayOfMonth);
+                    displayDayDetails(date);
+                }
+            };
+
+            if (!eventsForDay.isEmpty()) {
+                StringBuilder sb = new StringBuilder();
+                int maxShow = 3;
+                for (int i = 0; i < eventsForDay.size() && i < maxShow; i++) {
+                    Zdarzenie z = eventsForDay.get(i);
+                    String title = z.getTytul() != null ? z.getTytul() : "(bez tytułu)";
+                    sb.append("• ").append(title);
+                    if (i < Math.min(eventsForDay.size(), maxShow) - 1) sb.append('\n');
+                }
+                if (eventsForDay.size() > maxShow) {
+                    sb.append('\n').append("… (+").append(eventsForDay.size() - maxShow).append(")");
+                }
+
+                javax.swing.JTextArea area = new javax.swing.JTextArea(sb.toString());
+                area.setEditable(false);
+                area.setLineWrap(true);
+                area.setWrapStyleWord(true);
+                area.setOpaque(true);
+                area.setBackground(new Color(255, 250, 205)); // Żółte tło dla zdarzeń
+                area.setForeground(new Color(139, 0, 0)); // Ciemny czerwony tekst
+                area.setFont(area.getFont().deriveFont(Font.BOLD, Math.max(8f, calendarFontSize - 3f)));
+
+                // Ustaw tooltip z pełną listą zdarzeń
+                StringBuilder tooltip = new StringBuilder("Zdarzenia:\n");
+                for (Zdarzenie z : eventsForDay) {
+                    String title = z.getTytul() != null ? z.getTytul() : "(bez tytułu)";
+                    tooltip.append("- ").append(title);
+                    if (z.getOpis() != null && !z.getOpis().isBlank()) tooltip.append(" — ").append(z.getOpis());
+                    tooltip.append('\n');
+                }
+                dayPanel.setToolTipText(tooltip.toString());
+                dayPanel.add(area, BorderLayout.CENTER);
+                // Klikalność również na tekście zdarzeń
+                area.addMouseListener(dayClick);
+                area.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
             }
 
-            calendarGrid.add(cell);
+            dayPanel.addMouseListener(dayClick);
+            dayLabel.addMouseListener(dayClick);
+            dayPanel.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
+            dayLabel.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
+
+            calendarGrid.add(dayPanel);
         }
 
         // Uzupełnij siatkę do 7x7
@@ -392,45 +459,9 @@ public class CalendarGUI extends JFrame {
         viewMenu.addSeparator();
         viewMenu.add(colorItem);
         
-        // Sort menu
-        sortMenu = new JMenu("Sortuj");
-        JMenuItem sortKontaktyComparable = new JMenuItem("Kontakty (Nazwisko)");
-        sortKontaktyComparable.addActionListener(onAction(() -> { Collections.sort(appMemory.kontakty); refreshData(); }));
-        JMenuItem sortZdarzeniaComparable = new JMenuItem("Zdarzenia (Data)");
-        sortZdarzeniaComparable.addActionListener(onAction(() -> { Collections.sort(appMemory.zdarzenia); refreshData(); }));
-        
-        JMenu kontaktyComparatorSub = new JMenu("Kontakty przez Comparator");
-        JMenuItem sortImie = new JMenuItem("Imię");
-        sortImie.addActionListener(onAction(() -> { appMemory.kontakty.sort(new Kontakt.ImieComparator()); refreshData(); }));
-        JMenuItem sortTel = new JMenuItem("Numer");
-        sortTel.addActionListener(onAction(() -> { appMemory.kontakty.sort(new Kontakt.TelComparator()); refreshData(); }));
-        JMenuItem sortEmail = new JMenuItem("E-mail");
-        sortEmail.addActionListener(onAction(() -> { appMemory.kontakty.sort(new Kontakt.EmailComparator()); refreshData(); }));
-        kontaktyComparatorSub.add(sortImie);
-        kontaktyComparatorSub.add(sortTel);
-        kontaktyComparatorSub.add(sortEmail);
-        
-        JMenu zdarzeniaComparatorSub = new JMenu("Zdarzenia przez Comparator");
-        JMenuItem sortTytul = new JMenuItem("Tytuł");
-        sortTytul.addActionListener(onAction(() -> { appMemory.zdarzenia.sort(new Zdarzenie.TytulComparator()); refreshData(); }));
-        JMenuItem sortOpis = new JMenuItem("Opis");
-        sortOpis.addActionListener(onAction(() -> { appMemory.zdarzenia.sort(new Zdarzenie.OpisComparator()); refreshData(); }));
-        JMenuItem sortLink = new JMenuItem("Link");
-        sortLink.addActionListener(onAction(() -> { appMemory.zdarzenia.sort(new Zdarzenie.LinkComparator()); refreshData(); }));
-        zdarzeniaComparatorSub.add(sortTytul);
-        zdarzeniaComparatorSub.add(sortOpis);
-        zdarzeniaComparatorSub.add(sortLink);
-        
-        sortMenu.add(sortKontaktyComparable);
-        sortMenu.add(kontaktyComparatorSub);
-        sortMenu.addSeparator();
-        sortMenu.add(sortZdarzeniaComparable);
-        sortMenu.add(zdarzeniaComparatorSub);
-        
         menuBar.add(fileMenu);
         menuBar.add(editMenu);
         menuBar.add(viewMenu);
-        menuBar.add(sortMenu);
     }
     
     private JPanel createKontaktyPanel() {
@@ -464,6 +495,22 @@ public class CalendarGUI extends JFrame {
         buttonPanel.add(addKontaktBtn);
         buttonPanel.add(editKontaktBtn);
         buttonPanel.add(deleteKontaktBtn);
+        buttonPanel.add(javax.swing.Box.createHorizontalStrut(20));
+        
+        // Sortowanie
+        JButton sortByNameBtn = new JButton("Sortuj (Nazwisko)");
+        sortByNameBtn.addActionListener(onAction(() -> { Collections.sort(appMemory.kontakty); refreshData(); }));
+        JButton sortByImieBtn = new JButton("Sortuj (Imię)");
+        sortByImieBtn.addActionListener(onAction(() -> { appMemory.kontakty.sort(new Kontakt.ImieComparator()); refreshData(); }));
+        JButton sortByPhoneBtn = new JButton("Sortuj (Telefon)");
+        sortByPhoneBtn.addActionListener(onAction(() -> { appMemory.kontakty.sort(new Kontakt.TelComparator()); refreshData(); }));
+        JButton sortByEmailBtn = new JButton("Sortuj (Email)");
+        sortByEmailBtn.addActionListener(onAction(() -> { appMemory.kontakty.sort(new Kontakt.EmailComparator()); refreshData(); }));
+        
+        buttonPanel.add(sortByNameBtn);
+        buttonPanel.add(sortByImieBtn);
+        buttonPanel.add(sortByPhoneBtn);
+        buttonPanel.add(sortByEmailBtn);
         
         panel.add(buttonPanel, BorderLayout.SOUTH);
         
@@ -501,6 +548,22 @@ public class CalendarGUI extends JFrame {
         buttonPanel.add(addZdarzenieBtn);
         buttonPanel.add(editZdarzenieBtn);
         buttonPanel.add(deleteZdarzenieBtn);
+        buttonPanel.add(javax.swing.Box.createHorizontalStrut(20));
+        
+        // Sortowanie
+        JButton sortByDateBtn = new JButton("Sortuj (Data)");
+        sortByDateBtn.addActionListener(onAction(() -> { Collections.sort(appMemory.zdarzenia); refreshData(); }));
+        JButton sortByTitleBtn = new JButton("Sortuj (Tytuł)");
+        sortByTitleBtn.addActionListener(onAction(() -> { appMemory.zdarzenia.sort(new Zdarzenie.TytulComparator()); refreshData(); }));
+        JButton sortByDescBtn = new JButton("Sortuj (Opis)");
+        sortByDescBtn.addActionListener(onAction(() -> { appMemory.zdarzenia.sort(new Zdarzenie.OpisComparator()); refreshData(); }));
+        JButton sortByLinkBtn = new JButton("Sortuj (Link)");
+        sortByLinkBtn.addActionListener(onAction(() -> { appMemory.zdarzenia.sort(new Zdarzenie.LinkComparator()); refreshData(); }));
+        
+        buttonPanel.add(sortByDateBtn);
+        buttonPanel.add(sortByTitleBtn);
+        buttonPanel.add(sortByDescBtn);
+        buttonPanel.add(sortByLinkBtn);
         
         panel.add(buttonPanel, BorderLayout.SOUTH);
         
@@ -1039,5 +1102,218 @@ public class CalendarGUI extends JFrame {
         JScrollPane scroll = new JScrollPane(area);
         scroll.setPreferredSize(new Dimension(700, 450));
         JOptionPane.showMessageDialog(this, scroll, title, JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    // === Wyświetlanie szczegółów dnia w panelu (poniżej kalendarza) ===
+    private void displayDayDetails(java.time.LocalDate date) {
+        java.util.List<Zdarzenie> eventsForDay = new java.util.ArrayList<>();
+        for (Zdarzenie z : appMemory.zdarzenia) {
+            java.time.LocalDate d = z.getData();
+            if (d != null && d.equals(date)) {
+                eventsForDay.add(z);
+            }
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("=== ").append(date).append(" ===\n\n");
+
+        if (eventsForDay.isEmpty()) {
+            sb.append("Brak zdarzeń w tym dniu.");
+        } else {
+            sb.append("Zdarzenia:\n");
+            for (int i = 0; i < eventsForDay.size(); i++) {
+                Zdarzenie z = eventsForDay.get(i);
+                sb.append("\n[").append(i + 1).append("] ").append(z.getTytul() != null ? z.getTytul() : "(bez tytułu)").append("\n");
+                if (z.getOpis() != null && !z.getOpis().isBlank()) {
+                    sb.append("    Opis: ").append(z.getOpis()).append("\n");
+                }
+                if (z.getMiejsce() != null) {
+                    sb.append("    Link: ").append(z.getMiejsce()).append("\n");
+                }
+            }
+        }
+
+        if (calendarDayDetailsArea != null) {
+            calendarDayDetailsArea.setText(sb.toString());
+            calendarDayDetailsArea.setCaretPosition(0);
+        }
+    }
+
+    // === Okno dnia: lista zdarzeń + akcje ===
+    private void openDayDialog(java.time.LocalDate date) {
+        java.util.List<Zdarzenie> eventsForDay = new java.util.ArrayList<>();
+        for (Zdarzenie z : appMemory.zdarzenia) {
+            java.time.LocalDate d = z.getData();
+            if (d != null && d.equals(date)) {
+                eventsForDay.add(z);
+            }
+        }
+
+        javax.swing.DefaultListModel<String> model = new javax.swing.DefaultListModel<>();
+        for (Zdarzenie z : eventsForDay) {
+            String title = z.getTytul() != null ? z.getTytul() : "(bez tytułu)";
+            String line = "[" + z.getData() + "] " + title + (z.getOpis() != null && !z.getOpis().isBlank() ? " — " + z.getOpis() : "");
+            model.addElement(line);
+        }
+
+        JList<String> list = new JList<>(model);
+        list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        JScrollPane scroll = new JScrollPane(list);
+
+        JPanel btns = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton addBtn = new JButton("Dodaj");
+        JButton editBtn = new JButton("Edytuj");
+        JButton delBtn = new JButton("Usuń");
+        JButton closeBtn = new JButton("Zamknij");
+        btns.add(addBtn); btns.add(editBtn); btns.add(delBtn); btns.add(closeBtn);
+
+        JPanel content = new JPanel(new BorderLayout(10, 10));
+        content.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        content.add(new JLabel("Dzień: " + date), BorderLayout.NORTH);
+        content.add(scroll, BorderLayout.CENTER);
+        content.add(btns, BorderLayout.SOUTH);
+
+        JDialog dialog = new JDialog(this, "Zdarzenia dnia", true);
+        dialog.setSize(600, 400);
+        dialog.setLocationRelativeTo(this);
+        dialog.add(content);
+
+        addBtn.addActionListener(onAction(() -> {
+            addZdarzenieForDate(date);
+            refreshData();
+            fillCalendarGrid();
+            // Odśwież listę
+            model.clear();
+            for (Zdarzenie z : appMemory.zdarzenia) {
+                if (z.getData() != null && z.getData().equals(date)) {
+                    String title = z.getTytul() != null ? z.getTytul() : "(bez tytułu)";
+                    String line = "[" + z.getData() + "] " + title + (z.getOpis() != null && !z.getOpis().isBlank() ? " — " + z.getOpis() : "");
+                    model.addElement(line);
+                }
+            }
+        }));
+
+        editBtn.addActionListener(onAction(() -> {
+            int idx = list.getSelectedIndex();
+            if (idx < 0) return;
+            Zdarzenie z = eventsForDay.get(idx);
+            editZdarzenieObject(z);
+            refreshData();
+            fillCalendarGrid();
+            // odśwież
+            model.set(idx, "[" + z.getData() + "] " + (z.getTytul() != null ? z.getTytul() : "(bez tytułu)") + (z.getOpis() != null && !z.getOpis().isBlank() ? " — " + z.getOpis() : ""));
+        }));
+
+        delBtn.addActionListener(onAction(() -> {
+            int idx = list.getSelectedIndex();
+            if (idx < 0) return;
+            Zdarzenie z = eventsForDay.get(idx);
+            int confirm = JOptionPane.showConfirmDialog(this, "Usunąć wybrane zdarzenie?", "Potwierdzenie", JOptionPane.YES_NO_OPTION);
+            if (confirm == JOptionPane.YES_OPTION) {
+                appMemory.zdarzenia.remove(z);
+                eventsForDay.remove(idx);
+                model.remove(idx);
+                refreshData();
+                fillCalendarGrid();
+            }
+        }));
+
+        closeBtn.addActionListener(onAction(dialog::dispose));
+        dialog.setVisible(true);
+    }
+
+    private void addZdarzenieForDate(java.time.LocalDate date) {
+        JDialog dialog = new JDialog(this, "Dodaj Zdarzenie (" + date + ")", true);
+        dialog.setSize(400, 300);
+        dialog.setLocationRelativeTo(this);
+
+        JPanel panel = new JPanel(new GridLayout(5, 2, 10, 10));
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        JTextField tytulField = new JTextField();
+        JTextField opisField = new JTextField();
+        JTextField dataField = new JTextField(date.toString());
+        JTextField linkField = new JTextField();
+
+        panel.add(new JLabel("Tytuł:"));
+        panel.add(tytulField);
+        panel.add(new JLabel("Opis:"));
+        panel.add(opisField);
+        panel.add(new JLabel("Data:"));
+        panel.add(dataField);
+        panel.add(new JLabel("Link:"));
+        panel.add(linkField);
+
+        JButton okBtn = new JButton("OK");
+        JButton cancelBtn = new JButton("Anuluj");
+
+        okBtn.addActionListener(onAction(() -> {
+            try {
+                Zdarzenie z = new Zdarzenie(
+                    tytulField.getText(),
+                    opisField.getText(),
+                    java.time.LocalDate.parse(dataField.getText()),
+                    java.net.URI.create(linkField.getText()).toURL()
+                );
+                appMemory.zdarzenia.add(z);
+                refreshData();
+                dialog.dispose();
+                JOptionPane.showMessageDialog(this, "Zdarzenie dodane pomyślnie!");
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Błąd: " + ex.getMessage(), "Błąd", JOptionPane.ERROR_MESSAGE);
+            }
+        }));
+
+        cancelBtn.addActionListener(onAction(dialog::dispose));
+        panel.add(okBtn);
+        panel.add(cancelBtn);
+        dialog.add(panel);
+        dialog.setVisible(true);
+    }
+
+    private void editZdarzenieObject(Zdarzenie z) {
+        JDialog dialog = new JDialog(this, "Edytuj Zdarzenie", true);
+        dialog.setSize(400, 300);
+        dialog.setLocationRelativeTo(this);
+
+        JPanel panel = new JPanel(new GridLayout(5, 2, 10, 10));
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        JTextField tytulField = new JTextField(z.getTytul());
+        JTextField opisField = new JTextField(z.getOpis());
+        JTextField dataField = new JTextField(z.getData().toString());
+        JTextField linkField = new JTextField(z.getMiejsce() != null ? z.getMiejsce().toString() : "");
+
+        panel.add(new JLabel("Tytuł:"));
+        panel.add(tytulField);
+        panel.add(new JLabel("Opis:"));
+        panel.add(opisField);
+        panel.add(new JLabel("Data:"));
+        panel.add(dataField);
+        panel.add(new JLabel("Link:"));
+        panel.add(linkField);
+
+        JButton okBtn = new JButton("OK");
+        JButton cancelBtn = new JButton("Anuluj");
+
+        okBtn.addActionListener(onAction(() -> {
+            try {
+                z.setTytul(tytulField.getText());
+                z.setOpis(opisField.getText());
+                z.setData(java.time.LocalDate.parse(dataField.getText()));
+                z.setMiejsce(java.net.URI.create(linkField.getText()).toURL());
+                refreshData();
+                dialog.dispose();
+                JOptionPane.showMessageDialog(this, "Zdarzenie zaktualizowane!");
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Błąd: " + ex.getMessage(), "Błąd", JOptionPane.ERROR_MESSAGE);
+            }
+        }));
+
+        cancelBtn.addActionListener(onAction(dialog::dispose));
+        panel.add(okBtn);
+        panel.add(cancelBtn);
+        dialog.add(panel);
+        dialog.setVisible(true);
     }
 }
