@@ -190,17 +190,83 @@ public class Main {
             int idx = Integer.parseInt(sc.nextLine());
             Kontakt k = appMemory.kontakty.get(idx);
             while (true) {
-                System.out.println("\n[EDYTUJ KONTAKT]: 1. Wszystko | 2. Imię | 3. Nazwisko | 4. Numer | 5. E-mail | X. Wstecz");
+                System.out.println("\n[EDYTUJ KONTAKT]: 1. Wszystko | 2. Imię | 3. Nazwisko | 4. Numer | 5. E-mail | 6. Zdarzenia | X. Wstecz");
                 String a = sc.nextLine().toUpperCase();
                 if (a.equals("X")) return;
                 if (a.equals("1") || a.equals("2")) { System.out.print("Nowe imię: "); k.setImie(sc.nextLine()); }
                 if (a.equals("1") || a.equals("3")) { System.out.print("Nowe nazwisko: "); k.setNazwisko(sc.nextLine()); }
                 if (a.equals("1") || a.equals("4")) { System.out.print("Nowy numer: "); k.setTelStr(sc.nextLine()); }
                 if (a.equals("1") || a.equals("5")) { System.out.print("Nowy e-mail: "); k.setEmailStr(sc.nextLine()); }
-                System.out.println("[OK] Zaktualizowano pomyślnie.");
-                markChanged();
+                if (a.equals("6")) { manageKontaktZdarzenia(k); }
+                if (!a.equals("6")) System.out.println("[OK] Zaktualizowano pomyślnie.");
+                if (!a.equals("6")) markChanged();
             }
         } catch (Exception e) { System.out.println("[X] Błąd indeksu."); }
+    }
+
+    private static void manageKontaktZdarzenia(Kontakt k) {
+        while (true) {
+            System.out.println("\n[ZDARZENIA KONTAKTU]: " + k.getNazwisko() + " " + k.getImie());
+            System.out.println("1. Pokaż zdarzenia | 2. Dodaj zdarzenie | 3. Usuń zdarzenie | X. Wstecz");
+            String choice = sc.nextLine().toUpperCase();
+            if (choice.equals("X")) return;
+            
+            switch (choice) {
+                case "1" -> {
+                    List<Zdarzenie> zdarzenia = k.getZdarzenia();
+                    if (zdarzenia == null || zdarzenia.isEmpty()) {
+                        System.out.println("   — brak zdarzeń");
+                    } else {
+                        System.out.println("   Zdarzenia:");
+                        for (int i = 0; i < zdarzenia.size(); i++) {
+                            Zdarzenie z = zdarzenia.get(i);
+                            System.out.println("   [" + i + "] [" + z.getData() + "] " + z.getTytul());
+                        }
+                    }
+                }
+                case "2" -> {
+                    if (appMemory.zdarzenia.isEmpty()) {
+                        System.out.println("[!] Brak zdarzeń w systemie.");
+                    } else {
+                        showZdarzenia();
+                        System.out.print("Wybierz indeks zdarzenia do dodania: ");
+                        try {
+                            int idx = Integer.parseInt(sc.nextLine());
+                            Zdarzenie z = appMemory.zdarzenia.get(idx);
+                            k.dodajZdarzenie(z);
+                            z.dodajKontakt(k);
+                            System.out.println("[OK] " + z.getTytul() + " dodane do kontaktu.");
+                            markChanged();
+                        } catch (Exception e) {
+                            System.out.println("[X] Błąd indeksu.");
+                        }
+                    }
+                }
+                case "3" -> {
+                    List<Zdarzenie> zdarzenia = k.getZdarzenia();
+                    if (zdarzenia == null || zdarzenia.isEmpty()) {
+                        System.out.println("   — brak zdarzeń do usunięcia");
+                    } else {
+                        System.out.println("   Obecne zdarzenia:");
+                        for (int i = 0; i < zdarzenia.size(); i++) {
+                            Zdarzenie z = zdarzenia.get(i);
+                            System.out.println("   [" + i + "] [" + z.getData() + "] " + z.getTytul());
+                        }
+                        System.out.print("Wybierz indeks zdarzenia do usunięcia: ");
+                        try {
+                            int idx = Integer.parseInt(sc.nextLine());
+                            Zdarzenie z = zdarzenia.get(idx);
+                            k.usunZdarzenie(z);
+                            z.usunKontakt(k);
+                            System.out.println("[OK] " + z.getTytul() + " usunięte z kontaktu.");
+                            markChanged();
+                        } catch (Exception e) {
+                            System.out.println("[X] Błąd indeksu.");
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private static void manageZdarzenia() {
@@ -223,17 +289,84 @@ public class Main {
             int idx = Integer.parseInt(sc.nextLine());
             Zdarzenie z = appMemory.zdarzenia.get(idx);
             while (true) {
-                System.out.println("\n[EDYTUJ ZDARZENIE]: 1. Wszystko | 2. Tytuł | 3. Opis | 4. Data | 5. Miejsce | X. Wstecz");
+                System.out.println("\n[EDYTUJ ZDARZENIE]: 1. Wszystko | 2. Tytuł | 3. Opis | 4. Data | 5. Miejsce | 6. Uczestnicy | X. Wstecz");
                 String a = sc.nextLine().toUpperCase();
                 if (a.equals("X")) return;
                 if (a.equals("1") || a.equals("2")) { System.out.print("Nowy tytuł: "); z.setTytul(sc.nextLine()); }
                 if (a.equals("1") || a.equals("3")) { System.out.print("Nowy opis: "); z.setOpis(sc.nextLine()); }
                 if (a.equals("1") || a.equals("4")) { System.out.print("Nowa data (RRRR-MM-DD): "); z.setData(LocalDate.parse(sc.nextLine())); }
                 if (a.equals("1") || a.equals("5")) { System.out.print("Nowy link: "); try { z.setMiejsce(URI.create(sc.nextLine()).toURL()); } catch(Exception e){} }
-                System.out.println("[OK] Zaktualizowano pomyślnie.");
-                markChanged();
+                if (a.equals("6")) { manageZdarzenieUczestnicy(z); }
+                if (!a.equals("6")) System.out.println("[OK] Zaktualizowano pomyślnie.");
+                if (!a.equals("6")) markChanged();
             }
         } catch (Exception e) { System.out.println("[X] Błąd danych."); }
+    }
+
+    // --- 4. DANE (RAM/XML) ---
+    private static void manageZdarzenieUczestnicy(Zdarzenie z) {
+        while (true) {
+            System.out.println("\n[UCZESTNICY ZDARZENIA]: " + z.getTytul());
+            System.out.println("1. Pokaż uczestników | 2. Dodaj kontakt | 3. Usuń kontakt | X. Wstecz");
+            String choice = sc.nextLine().toUpperCase();
+            if (choice.equals("X")) return;
+            
+            switch (choice) {
+                case "1" -> {
+                    List<Kontakt> uczestnicy = z.getKontakty();
+                    if (uczestnicy == null || uczestnicy.isEmpty()) {
+                        System.out.println("   — brak uczestników");
+                    } else {
+                        System.out.println("   Uczestnicy:");
+                        for (int i = 0; i < uczestnicy.size(); i++) {
+                            Kontakt k = uczestnicy.get(i);
+                            System.out.println("   [" + i + "] " + k.getNazwisko() + " " + k.getImie());
+                        }
+                    }
+                }
+                case "2" -> {
+                    if (appMemory.kontakty.isEmpty()) {
+                        System.out.println("[!] Brak kontaktów w systemie.");
+                    } else {
+                        showKontakty();
+                        System.out.print("Wybierz indeks kontaktu do dodania: ");
+                        try {
+                            int idx = Integer.parseInt(sc.nextLine());
+                            Kontakt k = appMemory.kontakty.get(idx);
+                            z.dodajKontakt(k);
+                            k.dodajZdarzenie(z);
+                            System.out.println("[OK] " + k.getNazwisko() + " dodany do zdarzenia.");
+                            markChanged();
+                        } catch (Exception e) {
+                            System.out.println("[X] Błąd indeksu.");
+                        }
+                    }
+                }
+                case "3" -> {
+                    List<Kontakt> uczestnicy = z.getKontakty();
+                    if (uczestnicy == null || uczestnicy.isEmpty()) {
+                        System.out.println("   — brak uczestników do usunięcia");
+                    } else {
+                        System.out.println("   Obecni uczestnicy:");
+                        for (int i = 0; i < uczestnicy.size(); i++) {
+                            Kontakt k = uczestnicy.get(i);
+                            System.out.println("   [" + i + "] " + k.getNazwisko() + " " + k.getImie());
+                        }
+                        System.out.print("Wybierz indeks uczestnika do usunięcia: ");
+                        try {
+                            int idx = Integer.parseInt(sc.nextLine());
+                            Kontakt k = uczestnicy.get(idx);
+                            z.usunKontakt(k);
+                            k.usunZdarzenie(z);
+                            System.out.println("[OK] " + k.getNazwisko() + " usunięty ze zdarzenia.");
+                            markChanged();
+                        } catch (Exception e) {
+                            System.out.println("[X] Błąd indeksu.");
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // --- 4. DANE (RAM/XML) ---
