@@ -248,7 +248,6 @@ public class Main {
                     } else {
                         appMemory.kontakty.clear(); appMemory.zdarzenia.clear();
                         System.out.println("[OK] Pamięć RAM została wyczyszczona.");
-                        markChanged();
                     }
                 }
             } else if (c.equals("2")) {
