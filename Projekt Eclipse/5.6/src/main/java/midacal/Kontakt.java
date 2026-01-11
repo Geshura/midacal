@@ -15,6 +15,7 @@ public class Kontakt implements Serializable, Comparable<Kontakt> {
     @JsonIgnore private PhoneNumber numerTelefonu;
     @JsonIgnore private InternetAddress email;
     
+    // ORM: Lista zdarzeń przypisanych do kontaktu
     @JsonIgnore private List<Zdarzenie> udzialWZdarzeniach = new ArrayList<>();
 
     public Kontakt() {}
@@ -51,21 +52,20 @@ public class Kontakt implements Serializable, Comparable<Kontakt> {
         return (res == 0) ? this.imie.compareToIgnoreCase(inny.imie) : res;
     }
 
+    @Override
+    public String toString() {
+        return String.format("%-15s %-15s | Tel: %-10s | Email: %-20s | Wydarzenia: %d", 
+                nazwisko, imie, getTelStr(), getEmailStr(), udzialWZdarzeniach.size());
+    }
+
+    // Comparatory
     public static class ImieComparator implements Comparator<Kontakt> {
         @Override public int compare(Kontakt k1, Kontakt k2) { return k1.imie.compareToIgnoreCase(k2.imie); }
     }
     public static class TelComparator implements Comparator<Kontakt> {
         @Override public int compare(Kontakt k1, Kontakt k2) {
-            return Long.compare(k1.numerTelefonu.getNationalNumber(), k2.numerTelefonu.getNationalNumber());
+            return Long.compare(k1.numerTelefonu != null ? k1.numerTelefonu.getNationalNumber() : 0, 
+                               k2.numerTelefonu != null ? k2.numerTelefonu.getNationalNumber() : 0);
         }
-    }
-    public static class EmailComparator implements Comparator<Kontakt> {
-        @Override public int compare(Kontakt k1, Kontakt k2) { return k1.getEmailStr().compareToIgnoreCase(k2.getEmailStr()); }
-    }
-
-    @Override
-    public String toString() {
-        return String.format("%-15s %-15s | Tel: %-10s | Email: %-20s | Udział w: %d", 
-                nazwisko, imie, getTelStr(), getEmailStr(), udzialWZdarzeniach.size());
     }
 }

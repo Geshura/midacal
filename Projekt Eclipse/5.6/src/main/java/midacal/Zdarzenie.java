@@ -14,6 +14,7 @@ public class Zdarzenie implements Serializable, Comparable<Zdarzenie> {
     @JsonProperty("data") private LocalDate data;
     @JsonProperty("link") private URL miejsce;
     
+    // ORM: Lista uczestników zdarzenia
     @JsonIgnore private List<Kontakt> listaUczestnikow = new ArrayList<>();
 
     public Zdarzenie() {}
@@ -37,22 +38,12 @@ public class Zdarzenie implements Serializable, Comparable<Zdarzenie> {
     public void dodajUczestnika(Kontakt k) { 
         if (!listaUczestnikow.contains(k)) {
             listaUczestnikow.add(k);
-            k.dodajZdarzenie(this);
+            k.dodajZdarzenie(this); // Obustronne powiązanie
         }
     }
 
     @Override
     public int compareTo(Zdarzenie inne) { return this.data.compareTo(inne.data); }
-
-    public static class TytulComparator implements Comparator<Zdarzenie> {
-        @Override public int compare(Zdarzenie z1, Zdarzenie z2) { return z1.tytul.compareToIgnoreCase(z2.tytul); }
-    }
-    public static class OpisComparator implements Comparator<Zdarzenie> {
-        @Override public int compare(Zdarzenie z1, Zdarzenie z2) { return z1.opis.compareToIgnoreCase(z2.opis); }
-    }
-    public static class LinkComparator implements Comparator<Zdarzenie> {
-        @Override public int compare(Zdarzenie z1, Zdarzenie z2) { return z1.miejsce.toString().compareToIgnoreCase(z2.miejsce.toString()); }
-    }
 
     @Override
     public String toString() {
