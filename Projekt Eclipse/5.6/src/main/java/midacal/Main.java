@@ -4,12 +4,16 @@ import java.io.File;
 import java.net.URI;
 import java.net.URL;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Scanner;
 
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
+
 import jakarta.mail.internet.InternetAddress;
 
 public class Main {
@@ -17,6 +21,9 @@ public class Main {
     private static final String FILE_PATH = "midacalXML.xml";
     private static final String APP_NAME = "KALENDARZ MIDACAL";
     private static final Scanner sc = new Scanner(System.in);
+    private static final DBManager dbManager = new DBManager();
+    private static int xmlSaveCounter = 0;
+    private static final int BACKUP_INTERVAL = 10; // Co 10 zapisów do XML -> backup do DB
 
     public static class MemoryContainer {
         public List<Kontakt> kontakty = new ArrayList<>();
@@ -24,7 +31,24 @@ public class Main {
     }
 
     public static void main(String[] args) {
-        if (new File(FILE_PATH).exists()) loadFromXml();
+        System.out.println("=== URUCHAMIANIE KALENDARZA ===\n");
+        
+        // 1. Wczytaj z bazy danych (jeśli istnieje)
+        System.out.println("[ETAP 1] Próba wczytania danych z bazy...");
+        appMemory = dbManager.loadFromDatabase();
+        
+        // 2. Wczytaj z XML (jako backup/alternatywa)
+        if (new File(FILE_PATH).exists()) {
+            System.out.println("[ETAP 2] Znaleziono plik XML...");
+            if (appMemory.kontakty.isEmpty() && appMemory.zdarzenia.isEmpty()) {
+                System.out.println("[INFO] Baza pusta, wczytywanie z XML...");
+                loadFromXml();
+            } else {
+                System.out.println("[INFO] Dane już wczytane z bazy, pomijanie XML.");
+            }
+        }
+        
+        System.out.println("[GOTOWE] Aplikacja uruchomiona.\n");
         mainMenu();
     }
 
@@ -50,6 +74,10 @@ public class Main {
         } else {
             System.out.println("[...] Zapisywanie danych przed zamknięciem...");
             saveToXml();
+            
+            // Zapis do bazy danych przed wyjściem
+            System.out.println("[...] Synchronizacja z bazą danych...");
+            dbManager.saveToDatabase(appMemory);
         }
         System.out.println("[OK] Aplikacja zakończona. Do widzenia!");
         System.exit(0);
@@ -207,7 +235,7 @@ public class Main {
     // --- 4. DANE (RAM/XML) ---
     private static void dataManagementMenu() {
         while (true) {
-            System.out.println("\n[DANE]: 1. RAM | 2. XML | X. Wstecz");
+            System.out.println("\n[DANE]: 1. RAM | 2. XML | 3. BAZA DANYCH | X. Wstecz");
             String c = sc.nextLine().toUpperCase();
             if (c.equals("X")) return;
             if (c.equals("1")) {
@@ -231,6 +259,20 @@ public class Main {
                         System.gc();
                         if (f.exists() && f.delete()) System.out.println("[OK] Plik " + FILE_PATH + " został usunięty.");
                         else System.out.println("[X] Błąd: Plik nie istnieje lub jest zablokowany.");
+                    }
+                }
+            } else if (c.equals("3")) {
+                System.out.println("\n[BAZA DANYCH]");
+                System.out.println("1. Zapisz do bazy | 2. Wczytaj z bazy | X. Wstecz");
+                String db = sc.nextLine().toUpperCase();
+                switch (db) {
+                    case "1" -> {
+                        System.out.println("[...] Zapisywanie do bazy danych...");
+                        dbManager.saveToDatabase(appMemory);
+                    }
+                    case "2" -> {
+                        System.out.println("[...] Wczytywanie z bazy danych...");
+                        appMemory = dbManager.loadFromDatabase();
                     }
                 }
             }
@@ -276,6 +318,14 @@ public class Main {
             m.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
             m.writeValue(new File(FILE_PATH), appMemory);
             System.out.println("[OK] Dane zostały zapisane do pliku " + FILE_PATH);
+            
+            // Backup do bazy co X zapisów
+            xmlSaveCounter++;
+            if (xmlSaveCounter >= BACKUP_INTERVAL) {
+                System.out.println("[BACKUP] Wykonywanie automatycznego backupu do bazy danych...");
+                dbManager.saveToDatabase(appMemory);
+                xmlSaveCounter = 0;
+            }
         } catch (Exception e) { e.printStackTrace(); }
     }
 
