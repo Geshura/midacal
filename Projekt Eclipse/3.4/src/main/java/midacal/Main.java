@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -15,8 +16,9 @@ import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import jakarta.mail.internet.InternetAddress;
 
 public class Main {
+    // Kontener danych - ArrayList
     private static DataContainer db = new DataContainer();
-    private static final String FILE_PATH = "midacal_kalendarz.xml";
+    private static final String PLIK_XML = "baza_danych.xml";
     private static final Scanner sc = new Scanner(System.in);
 
     public static class DataContainer {
@@ -25,76 +27,72 @@ public class Main {
     }
 
     public static void main(String[] args) {
-        if (!loadFromXml()) {
-            seedData();
+        if (!wczytajXML()) {
+            inicjalizujDaneHardCoded();
         }
 
         while (true) {
-            System.out.println("\n--- PROFESJONALNY MIDACAL (JDK 25) ---");
-            System.out.println("1. Lista | 2. Sortuj | 3. Zapisz XML | 4. Wczytaj XML | 5. USUŃ | 0. Wyjście");
-            System.out.print("Wybierz: ");
-            String choice = sc.nextLine();
+            System.out.println("\n--- MIDACAL PROFESIONAL (JDK 25) ---");
+            System.out.println("1. Wyświetl | 2. Sortuj | 3. Zapisz | 4. Wczytaj | 5. USUŃ | 0. Wyjście");
+            System.out.print("Wybór: ");
+            String w = sc.nextLine();
 
-            switch (choice) {
-                case "1" -> showAll();
-                case "2" -> sortMenu();
-                case "3" -> saveToXml();
-                case "4" -> loadFromXml();
-                case "5" -> deleteMenu();
-                case "0" -> { saveToXml(); System.exit(0); }
-                default -> System.out.println("Nieznana opcja.");
+            switch (w) {
+                case "1" -> wyswietlWszystko();
+                case "2" -> menuSortowania();
+                case "3" -> zapiszXML();
+                case "4" -> wczytajXML();
+                case "5" -> menuUsuwania();
+                case "0" -> { zapiszXML(); System.exit(0); }
+                default -> System.out.println("Niepoprawna opcja.");
             }
         }
     }
 
-    private static void sortMenu() {
-        System.out.println("Sortuj: 1. Domyślne | 2. Imię | 3. Email | 4. Tel | 5. Tytuł | 6. Opis | 7. Link");
+    private static void menuSortowania() {
+        System.out.println("Sortuj: 1. Nazwisko | 2. Imię | 3. Data | 4. Tytuł");
         String s = sc.nextLine();
         switch (s) {
-            case "1" -> { Collections.sort(db.kontakty); Collections.sort(db.zdarzenia); }
+            case "1" -> Collections.sort(db.kontakty);
             case "2" -> db.kontakty.sort(new Kontakt.ImieComparator());
-            case "3" -> db.kontakty.sort(new Kontakt.EmailComparator());
-            case "4" -> db.kontakty.sort(new Kontakt.TelComparator());
-            case "5" -> db.zdarzenia.sort(new Zdarzenie.TytulComparator());
-            case "6" -> db.zdarzenia.sort(new Zdarzenie.OpisComparator());
-            case "7" -> db.zdarzenia.sort(new Zdarzenie.LinkComparator());
+            case "3" -> Collections.sort(db.zdarzenia);
+            case "4" -> db.zdarzenia.sort(new Zdarzenie.TytulComparator());
         }
-        showAll();
+        wyswietlWszystko();
     }
 
-    private static void deleteMenu() {
-        System.out.println("Usuń: 1. Kontakt | 2. Zdarzenie | Inny: Anuluj");
-        String type = sc.nextLine();
-        if (!type.equals("1") && !type.equals("2")) return;
-
-        showAll();
+    private static void menuUsuwania() {
+        wyswietlWszystko();
+        System.out.print("Usuń z: 1. Kontakty | 2. Zdarzenia: ");
+        String t = sc.nextLine();
         System.out.print("Podaj indeks: ");
         try {
             int idx = Integer.parseInt(sc.nextLine());
-            System.out.print("CZY NA PEWNO USUNĄĆ REKORD #" + idx + "? (T/N): ");
+            System.out.print("CZY NA PEWNO USUNĄĆ? (T/N): ");
             if (sc.nextLine().equalsIgnoreCase("T")) {
-                if (type.equals("1")) db.kontakty.remove(idx);
+                if (t.equals("1")) db.kontakty.remove(idx);
                 else db.zdarzenia.remove(idx);
-                System.out.println("Usunięto.");
-                saveToXml();
+                zapiszXML();
             }
         } catch (Exception e) { System.out.println("Błąd indeksu."); }
-        showAll();
+        wyswietlWszystko();
     }
 
-    private static void saveToXml() {
+    private static void zapiszXML() {
         try {
             XmlMapper mapper = new XmlMapper();
             mapper.registerModule(new JavaTimeModule());
-            mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
             mapper.enable(SerializationFeature.INDENT_OUTPUT);
-            mapper.writeValue(new File(FILE_PATH), db);
-            System.out.println(">>> XML Zapisany.");
+            mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+            mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+            
+            mapper.writeValue(new File(PLIK_XML), db);
+            System.out.println(">>> Zapisano do XML.");
         } catch (Exception e) { e.printStackTrace(); }
     }
 
-    private static boolean loadFromXml() {
-        File f = new File(FILE_PATH);
+    private static boolean wczytajXML() {
+        File f = new File(PLIK_XML);
         if (!f.exists()) return false;
         try {
             XmlMapper mapper = new XmlMapper();
@@ -105,41 +103,41 @@ public class Main {
         } catch (Exception e) { return false; }
     }
 
-    private static void showAll() {
-        System.out.println("\n--- LISTA KONTAKTÓW ---");
+    private static void wyswietlWszystko() {
+        System.out.println("\n--- KONTAKTY ---");
         for (int i = 0; i < db.kontakty.size(); i++) System.out.println("[" + i + "] " + db.kontakty.get(i));
-        System.out.println("\n--- LISTA ZDARZEŃ ---");
+        System.out.println("\n--- ZDARZENIA ---");
         for (int i = 0; i < db.zdarzenia.size(); i++) System.out.println("[" + i + "] " + db.zdarzenia.get(i));
     }
 
-    private static void seedData() {
+    private static void inicjalizujDaneHardCoded() {
         try {
             var pu = PhoneNumberUtil.getInstance();
-            // --- HARD-CODED LISTA KONTAKTÓW ---
-            db.kontakty.add(new Kontakt("Adam", "Nowak", pu.parse("501234567", "PL"), new InternetAddress("adam.nowak@gmail.com")));
-            db.kontakty.add(new Kontakt("Barbara", "Kowalska", pu.parse("602345678", "PL"), new InternetAddress("basia.k@wp.pl")));
-            db.kontakty.add(new Kontakt("Cezary", "Pazura", pu.parse("703456789", "PL"), new InternetAddress("czarek@aktor.pl")));
-            db.kontakty.add(new Kontakt("Dorota", "Rabczewska", pu.parse("804567890", "PL"), new InternetAddress("doda@muzyka.pl")));
-            db.kontakty.add(new Kontakt("Edward", "Nożycoręki", pu.parse("505678901", "PL"), new InternetAddress("edzio@scissors.com")));
-            db.kontakty.add(new Kontakt("Filip", "Chajzer", pu.parse("606789012", "PL"), new InternetAddress("filip@tvn.pl")));
-            db.kontakty.add(new Kontakt("Grażyna", "Torbicka", pu.parse("707890123", "PL"), new InternetAddress("grazyna@kultura.pl")));
-            db.kontakty.add(new Kontakt("Henryk", "Sienkiewicz", pu.parse("808901234", "PL"), new InternetAddress("henio@trylogia.pl")));
-            db.kontakty.add(new Kontakt("Iga", "Świątek", pu.parse("509012345", "PL"), new InternetAddress("iga.tenis@sport.pl")));
-            db.kontakty.add(new Kontakt("Janusz", "Gajos", pu.parse("610123456", "PL"), new InternetAddress("janusz@teatr.pl")));
+            // 10 KONTAKTÓW (HARD-CODED)
+            db.kontakty.add(new Kontakt("Jan", "Kowalski", pu.parse("500100200", "PL"), new InternetAddress("jan.k@wp.pl")));
+            db.kontakty.add(new Kontakt("Anna", "Nowak", pu.parse("600200300", "PL"), new InternetAddress("ania.n@gmail.com")));
+            db.kontakty.add(new Kontakt("Piotr", "Zieliński", pu.parse("700300400", "PL"), new InternetAddress("piotrek@o2.pl")));
+            db.kontakty.add(new Kontakt("Maria", "Wiśniewska", pu.parse("800400500", "PL"), new InternetAddress("maria.w@onet.pl")));
+            db.kontakty.add(new Kontakt("Tomasz", "Mazur", pu.parse("501501501", "PL"), new InternetAddress("tomek.m@interia.pl")));
+            db.kontakty.add(new Kontakt("Ewa", "Wójcik", pu.parse("602602602", "PL"), new InternetAddress("ewcia@poczta.pl")));
+            db.kontakty.add(new Kontakt("Krzysztof", "Krawczyk", pu.parse("703703703", "PL"), new InternetAddress("krzysiu@parostatek.pl")));
+            db.kontakty.add(new Kontakt("Beata", "Kozidrak", pu.parse("804804804", "PL"), new InternetAddress("beata@bajm.pl")));
+            db.kontakty.add(new Kontakt("Robert", "Lewandowski", pu.parse("900100200", "PL"), new InternetAddress("rl9@bmw.de")));
+            db.kontakty.add(new Kontakt("Iga", "Świątek", pu.parse("555444333", "PL"), new InternetAddress("iga@tenis.pl")));
 
-            // --- HARD-CODED LISTA ZDARZEŃ ---
-            db.zdarzenia.add(new Zdarzenie("Finał Roland Garros", "Oglądanie meczu Igi", LocalDate.of(2026, 6, 8), URI.create("https://eurosport.pl").toURL()));
-            db.zdarzenia.add(new Zdarzenie("Wizyta u dentysty", "Przegląd kontrolny", LocalDate.of(2026, 2, 15), URI.create("https://znanylekarz.pl/stomatolog").toURL()));
-            db.zdarzenia.add(new Zdarzenie("Premiera filmu", "Nowy Bond w kinach", LocalDate.of(2026, 11, 20), URI.create("https://multikino.pl").toURL()));
-            db.zdarzenia.add(new Zdarzenie("Warsztaty Java", "JDK 25 Nowości", LocalDate.of(2026, 3, 10), URI.create("https://oracle.com/java").toURL()));
-            db.zdarzenia.add(new Zdarzenie("Urlop w górach", "Zakopane - ferie", LocalDate.of(2026, 1, 25), URI.create("https://booking.com/zakopane").toURL()));
-            db.zdarzenia.add(new Zdarzenie("Konferencja IT", "Wystąpienie o XML", LocalDate.of(2026, 5, 5), URI.create("https://it-conf.pl").toURL()));
-            db.zdarzenia.add(new Zdarzenie("Urodziny Mamy", "Przyjęcie niespodzianka", LocalDate.of(2026, 8, 12), URI.create("https://fb.com/events/1").toURL()));
-            db.zdarzenia.add(new Zdarzenie("Zjazd Absolwentów", "Spotkanie po latach", LocalDate.of(2026, 9, 30), URI.create("https://nasza-klasa.pl").toURL()));
-            db.zdarzenia.add(new Zdarzenie("Zakupy świąteczne", "Prezenty dla rodziny", LocalDate.of(2026, 12, 20), URI.create("https://allegro.pl").toURL()));
-            db.zdarzenia.add(new Zdarzenie("Trening personalny", "Siłownia - klatka i plecy", LocalDate.of(2026, 1, 15), URI.create("https://gym-pro.pl").toURL()));
+            // 10 ZDARZEŃ (HARD-CODED)
+            db.zdarzenia.add(new Zdarzenie("Finał Tenisa", "Mecz Igi Świątek", LocalDate.of(2026, 6, 10), URI.create("http://rolandgarros.com").toURL()));
+            db.zdarzenia.add(new Zdarzenie("Dentysta", "Przegląd okresowy", LocalDate.of(2026, 2, 15), URI.create("http://znanylekarz.pl").toURL()));
+            db.zdarzenia.add(new Zdarzenie("Premiera Filmu", "Nowy film akcji", LocalDate.of(2026, 3, 20), URI.create("http://multikino.pl").toURL()));
+            db.zdarzenia.add(new Zdarzenie("Egzamin Java", "Zaliczenie projektu", LocalDate.of(2026, 1, 30), URI.create("http://uczelnia.edu.pl").toURL()));
+            db.zdarzenia.add(new Zdarzenie("Urodziny", "Impreza u Adama", LocalDate.of(2026, 5, 5), URI.create("http://facebook.com/events").toURL()));
+            db.zdarzenia.add(new Zdarzenie("Konferencja IT", "Nowości w JDK 25", LocalDate.of(2026, 4, 12), URI.create("http://devconf.pl").toURL()));
+            db.zdarzenia.add(new Zdarzenie("Zakupy", "Prezent dla mamy", LocalDate.of(2026, 12, 22), URI.create("http://allegro.pl").toURL()));
+            db.zdarzenia.add(new Zdarzenie("Urlop", "Wyjazd w Alpy", LocalDate.of(2026, 1, 10), URI.create("http://booking.com").toURL()));
+            db.zdarzenia.add(new Zdarzenie("Mecz kadry", "Polska - Niemcy", LocalDate.of(2026, 9, 15), URI.create("http://laczynaspilka.pl").toURL()));
+            db.zdarzenia.add(new Zdarzenie("Serwis auta", "Wymiana oleju", LocalDate.of(2026, 3, 5), URI.create("http://aso.pl").toURL()));
 
-            System.out.println(">>> Zainicjowano 10+10 unikalnych rekordów.");
+            System.out.println(">>> Pomyślnie wczytano 10 kontaktów i 10 zdarzeń (Hard-coded).");
         } catch (Exception e) { e.printStackTrace(); }
     }
 }
