@@ -216,25 +216,21 @@ public class CalendarGUI extends JFrame {
         // Panel informacji o dniu (poniżej kalendarza)
         JPanel dayDetailsPanel = new JPanel(new BorderLayout(10, 10));
         dayDetailsPanel.setBorder(BorderFactory.createTitledBorder("Szczegóły dnia"));
-        dayDetailsPanel.setPreferredSize(new Dimension(0, 150));
+        dayDetailsPanel.setPreferredSize(new Dimension(0, 80));
         calendarDayDetailsArea = new javax.swing.JTextArea();
         calendarDayDetailsArea.setEditable(false);
         calendarDayDetailsArea.setLineWrap(true);
         calendarDayDetailsArea.setWrapStyleWord(true);
-        calendarDayDetailsArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        calendarDayDetailsArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 10));
         JScrollPane detailsScroll = new JScrollPane(calendarDayDetailsArea);
         dayDetailsPanel.add(detailsScroll, BorderLayout.CENTER);
 
         // Siatka dni 7x7 (nagłówki dni tygodnia + maks. 6 tygodni)
-        calendarGrid = new JPanel(new GridLayout(7, 7, 8, 8)); // Większe przerwy między kafelkami
+        calendarGrid = new JPanel(new GridLayout(7, 7, 6, 6)); // Mniejsze przerwy
         calendarGrid.setBackground(new Color(250, 250, 250));
-        JScrollPane gridScroll = new JScrollPane(calendarGrid);
-        gridScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        gridScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        gridScroll.getVerticalScrollBar().setUnitIncrement(20);
 
         JPanel centerPanel = new JPanel(new BorderLayout(10, 10));
-        centerPanel.add(gridScroll, BorderLayout.CENTER);
+        centerPanel.add(calendarGrid, BorderLayout.CENTER);
         centerPanel.add(dayDetailsPanel, BorderLayout.SOUTH);
         panel.add(centerPanel, BorderLayout.CENTER);
 
@@ -302,20 +298,21 @@ public class CalendarGUI extends JFrame {
         // Dni miesiąca
         java.time.LocalDate today = java.time.LocalDate.now();
         for (int day = 1; day <= daysInMonth; day++) {
-            JPanel dayPanel = new JPanel(new BorderLayout());
-            dayPanel.setBorder(BorderFactory.createLineBorder(Color.DARK_GRAY, 2));
+            JPanel dayPanel = new JPanel(new BorderLayout(3, 3));
+            dayPanel.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200), 1));
             dayPanel.setOpaque(true);
-            dayPanel.setBackground(new Color(245, 245, 245)); // Jasne szare tło dla kafelka
+            dayPanel.setBackground(Color.WHITE); // Białe tło
 
             JLabel dayLabel = new JLabel(String.valueOf(day), SwingConstants.CENTER);
-            dayLabel.setFont(dayLabel.getFont().deriveFont(Font.BOLD, calendarFontSize));
+            dayLabel.setFont(dayLabel.getFont().deriveFont(Font.BOLD, 12f));
             dayLabel.setForeground(Color.BLACK);
             dayPanel.add(dayLabel, BorderLayout.NORTH);
 
             // Podświetl dzisiejszy dzień
             if (today.getYear() == y && today.getMonthValue() - 1 == m && today.getDayOfMonth() == day) {
-                dayPanel.setBackground(new Color(200, 220, 255)); // Niebieskie tło na dziś
-                dayLabel.setFont(dayLabel.getFont().deriveFont(Font.BOLD));
+                dayPanel.setBackground(new Color(255, 255, 200)); // Żółte tło na dziś
+                dayPanel.setBorder(BorderFactory.createLineBorder(new Color(255, 200, 0), 2));
+                dayLabel.setFont(dayLabel.getFont().deriveFont(Font.BOLD, 13f));
             }
 
             // Zbierz zdarzenia w tym dniu i wyświetl tytuły
@@ -340,8 +337,12 @@ public class CalendarGUI extends JFrame {
             };
 
             if (!eventsForDay.isEmpty()) {
+                // Całe tło zielone, jeśli są zdarzenia
+                dayPanel.setBackground(new Color(144, 238, 144)); // Jasna zieleń na cały kafelek
+                dayPanel.setBorder(BorderFactory.createLineBorder(new Color(34, 139, 34), 1)); // Ciemnozielony border
+
                 StringBuilder sb = new StringBuilder();
-                int maxShow = 3;
+                int maxShow = 2;
                 for (int i = 0; i < eventsForDay.size() && i < maxShow; i++) {
                     Zdarzenie z = eventsForDay.get(i);
                     String title = z.getTytul() != null ? z.getTytul() : "(bez tytułu)";
@@ -349,17 +350,16 @@ public class CalendarGUI extends JFrame {
                     if (i < Math.min(eventsForDay.size(), maxShow) - 1) sb.append('\n');
                 }
                 if (eventsForDay.size() > maxShow) {
-                    sb.append('\n').append("… (+").append(eventsForDay.size() - maxShow).append(")");
+                    sb.append('\n').append("…(+").append(eventsForDay.size() - maxShow).append(")");
                 }
 
                 javax.swing.JTextArea area = new javax.swing.JTextArea(sb.toString());
                 area.setEditable(false);
                 area.setLineWrap(true);
                 area.setWrapStyleWord(true);
-                area.setOpaque(true);
-                area.setBackground(new Color(255, 250, 205)); // Żółte tło dla zdarzeń
-                area.setForeground(new Color(139, 0, 0)); // Ciemny czerwony tekst
-                area.setFont(area.getFont().deriveFont(Font.BOLD, Math.max(8f, calendarFontSize - 3f)));
+                area.setOpaque(false); // Przezroczyste - pokaż zielone tło panelu
+                area.setForeground(new Color(0, 100, 0)); // Ciemna zieleń tekstu
+                area.setFont(area.getFont().deriveFont(Font.BOLD, 8f));
 
                 // Ustaw tooltip z pełną listą zdarzeń
                 StringBuilder tooltip = new StringBuilder("Zdarzenia:\n");
