@@ -31,6 +31,39 @@ public class Main {
     }
 
     public static void main(String[] args) {
+        // Wczytaj dane przy starcie
+        loadData();
+        
+        // Obsługa argumentów: -txt (tryb tekstowy) lub -gui (tryb graficzny)
+        boolean guiMode = true; // domyślnie GUI
+        for (String arg : args) {
+            if (arg.equalsIgnoreCase("-txt")) guiMode = false;
+            if (arg.equalsIgnoreCase("-gui")) guiMode = true;
+        }
+        
+        if (guiMode) {
+            // Uruchom tryb graficzny na wątku EDT
+            System.out.println("[INFO] Uruchamianie trybu graficznego...");
+            try {
+                javax.swing.SwingUtilities.invokeLater(() -> {
+                    try {
+                        javax.swing.UIManager.setLookAndFeel(javax.swing.UIManager.getSystemLookAndFeelClassName());
+                    } catch (Exception ignored) {}
+                    CalendarGUI gui = new CalendarGUI(appMemory, dbManager);
+                    gui.setVisible(true);
+                });
+            } catch (Exception e) {
+                System.err.println("[GUI ERROR] Nie można uruchomić GUI: " + e.getMessage());
+                e.printStackTrace();
+            }
+        } else {
+            // Uruchom tryb tekstowy
+            System.out.println("[INFO] Uruchamianie trybu tekstowego...");
+            mainMenu();
+        }
+    }
+
+    private static void loadData() {
         System.out.println("=== URUCHAMIANIE KALENDARZA ===\n");
         
         // 1. Wczytaj z bazy danych (jeśli istnieje)
@@ -49,7 +82,6 @@ public class Main {
         }
         
         System.out.println("[GOTOWE] Aplikacja uruchomiona.\n");
-        mainMenu();
     }
 
     private static void mainMenu() {
