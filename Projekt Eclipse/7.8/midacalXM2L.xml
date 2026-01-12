@@ -4,71 +4,71 @@
       <id/>
       <imie>Adam</imie>
       <nazwisko>Mickiewicz</nazwisko>
-      <telefon>501111222</telefon>
       <email>adam@wieszcz.pl</email>
+      <telefon>501111222</telefon>
     </kontakty>
     <kontakty>
       <id/>
       <imie>Juliusz</imie>
       <nazwisko>Słowacki</nazwisko>
-      <telefon>602222333</telefon>
       <email>julek@balladyna.pl</email>
+      <telefon>602222333</telefon>
     </kontakty>
     <kontakty>
       <id/>
       <imie>Iga</imie>
       <nazwisko>Świątek</nazwisko>
-      <telefon>703333444</telefon>
       <email>iga@sport.pl</email>
+      <telefon>703333444</telefon>
     </kontakty>
     <kontakty>
       <id/>
       <imie>Robert</imie>
       <nazwisko>Lewandowski</nazwisko>
-      <telefon>804444555</telefon>
       <email>rl9@lewy.pl</email>
+      <telefon>804444555</telefon>
     </kontakty>
     <kontakty>
       <id/>
       <imie>Janusz</imie>
       <nazwisko>Gajos</nazwisko>
-      <telefon>505555666</telefon>
       <email>janusz@aktor.pl</email>
+      <telefon>505555666</telefon>
     </kontakty>
     <kontakty>
       <id/>
       <imie>Beata</imie>
       <nazwisko>Kozidrak</nazwisko>
-      <telefon>606666777</telefon>
       <email>beata@bajm.pl</email>
+      <telefon>606666777</telefon>
     </kontakty>
     <kontakty>
       <id/>
       <imie>Fryderyk</imie>
       <nazwisko>Chopin</nazwisko>
-      <telefon>707777888</telefon>
       <email>frycek@piano.pl</email>
+      <telefon>707777888</telefon>
     </kontakty>
     <kontakty>
       <id/>
       <imie>Maria</imie>
       <nazwisko>Skłodowska</nazwisko>
-      <telefon>808888999</telefon>
       <email>maria@rad.pl</email>
+      <telefon>808888999</telefon>
     </kontakty>
     <kontakty>
       <id/>
       <imie>Wisława</imie>
       <nazwisko>Szymborska</nazwisko>
-      <telefon>509999000</telefon>
       <email>wisla@poezja.pl</email>
+      <telefon>509999000</telefon>
     </kontakty>
     <kontakty>
       <id/>
       <imie>Mikołaj</imie>
       <nazwisko>Kopernik</nazwisko>
-      <telefon>610123456</telefon>
       <email>mikolaj@niebo.pl</email>
+      <telefon>610123456</telefon>
     </kontakty>
   </kontakty>
   <zdarzenia>

@@ -31,8 +31,16 @@ public class Zdarzenie implements Serializable, Comparable<Zdarzenie> {
     public void setId(Long id) { this.id = id; }
     public List<Kontakt> getKontakty() { return kontakty; }
     public void setKontakty(List<Kontakt> kontakty) { this.kontakty = kontakty; }
-    public void dodajKontakt(Kontakt k) { if (!kontakty.contains(k)) kontakty.add(k); }
-    public void usunKontakt(Kontakt k) { kontakty.remove(k); }
+    public void dodajKontakt(Kontakt k) { 
+        if (!kontakty.contains(k)) {
+            kontakty.add(k);
+            k.dodajZdarzenie(this);
+        }
+    }
+    public void usunKontakt(Kontakt k) { 
+        kontakty.remove(k);
+        k.usunZdarzenie(this);
+    }
 
     public String getTytul() { return tytul; }
     public void setTytul(String t) { this.tytul = t; }

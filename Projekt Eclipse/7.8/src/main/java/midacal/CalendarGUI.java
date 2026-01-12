@@ -1,43 +1,12 @@
 package midacal;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.Font;
-import java.awt.GridLayout;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
+import java.awt.*;
+import java.awt.event.*;
+import java.io.File;
 import java.time.LocalDate;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
-import javax.swing.BorderFactory;
-import javax.swing.DefaultListModel;
-import javax.swing.JButton;
-import javax.swing.JColorChooser;
-import javax.swing.JComboBox;
-import javax.swing.JDesktopPane;
-import javax.swing.JDialog;
-import javax.swing.JFileChooser;
-import javax.swing.JFrame;
-import javax.swing.JInternalFrame;
-import javax.swing.JLabel;
-import javax.swing.JList;
-import javax.swing.JMenu;
-import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JProgressBar;
-import javax.swing.JScrollPane;
-import javax.swing.JSlider;
-import javax.swing.JSplitPane;
-import javax.swing.JTabbedPane;
-import javax.swing.JTable;
-import javax.swing.JTextField;
-import javax.swing.ListSelectionModel;
-import javax.swing.SwingConstants;
+import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
 public class CalendarGUI extends JFrame {
@@ -56,8 +25,6 @@ public class CalendarGUI extends JFrame {
     private JPanel calendarGrid;
     private JLabel monthLabel;
     private java.util.Calendar currentMonth;
-    private JComboBox<String> monthCombo;
-    private JComboBox<Integer> yearCombo;
     private Color eventDayColor = new Color(0, 102, 0);
     
     private JMenuBar menuBar;
@@ -65,9 +32,13 @@ public class CalendarGUI extends JFrame {
     
     private JButton addKontaktBtn, editKontaktBtn, deleteKontaktBtn;
     private JButton addZdarzenieBtn, editZdarzenieBtn, deleteZdarzenieBtn;
-    private JButton saveBtn;
+    private JButton refreshBtn, saveBtn;
     
     private javax.swing.JTextArea calendarDayDetailsArea; // Panel szczegółów dnia w kalendarzu
+    
+    // Szczegóły paneli dla Kontaktów i Zdarzeń
+    private javax.swing.JTextArea kontaktyDetailsArea;
+    private javax.swing.JTextArea zdarzeniaDetailsArea;
     
     public CalendarGUI(Main.MemoryContainer memory, DBManager dbMgr) {
         this.appMemory = memory;
@@ -80,7 +51,7 @@ public class CalendarGUI extends JFrame {
 
     private void initializeGUI() {
         setTitle("KALENDARZ MIDACAL - Tryb Graficzny");
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         setSize(1000, 700);
         setLocationRelativeTo(null);
         setResizable(true);
@@ -129,66 +100,96 @@ public class CalendarGUI extends JFrame {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // Pasek nawigacji miesiąca z gotowymi komponentami
-        JPanel navPanel = new JPanel(new BorderLayout(10, 10));
-        JPanel leftNav = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
-        JButton prevBtn = new JButton("◀ Poprzedni");
-        JButton nextBtn = new JButton("Następny ▶");
+        // Pasek nawigacji - wszystko w jednej linii
+        JPanel navPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 15));
+        navPanel.setBackground(new Color(245, 245, 250));
+        navPanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 2, 0, new Color(200, 200, 210)),
+            BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+        
+        // Nagłówek z aktualnym miesiącem i rokiem
         monthLabel = new JLabel("", SwingConstants.CENTER);
-        monthLabel.setFont(monthLabel.getFont().deriveFont(Font.BOLD, 16f));
-
-        // ComboBox miesiąc/rok
-        String[] miesiace = {"Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec","Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"};
-        monthCombo = new JComboBox<>(miesiace);
-        Integer[] lata = new Integer[21];
-        int baseYear = java.time.LocalDate.now().getYear();
-        for (int i = 0; i <= 20; i++) lata[i] = baseYear - 10 + i;
-        yearCombo = new JComboBox<>(lata);
-
-        leftNav.add(prevBtn);
-        leftNav.add(nextBtn);
-        leftNav.add(new JLabel("Miesiąc:"));
-        leftNav.add(monthCombo);
-        leftNav.add(new JLabel("Rok:"));
-        leftNav.add(yearCombo);
-
-        navPanel.add(leftNav, BorderLayout.WEST);
-        navPanel.add(monthLabel, BorderLayout.CENTER);
+        monthLabel.setFont(monthLabel.getFont().deriveFont(Font.BOLD, 20f));
+        monthLabel.setForeground(new Color(40, 40, 50));
+        monthLabel.setPreferredSize(new Dimension(200, 30));
+        
+        // Przyciski nawigacji
+        JButton prevMonthBtn = new JButton("◀ Poprzedni");
+        JButton nextMonthBtn = new JButton("Następny ▶");
+        prevMonthBtn.setFont(prevMonthBtn.getFont().deriveFont(Font.BOLD, 12f));
+        nextMonthBtn.setFont(nextMonthBtn.getFont().deriveFont(Font.BOLD, 12f));
+        prevMonthBtn.setFocusPainted(false);
+        nextMonthBtn.setFocusPainted(false);
+        
+        // DatePicker w środku
+        com.github.lgooddatepicker.components.DatePickerSettings dateSettings = new com.github.lgooddatepicker.components.DatePickerSettings();
+        dateSettings.setFormatForDatesCommonEra("yyyy-MM-dd");
+        com.github.lgooddatepicker.components.DatePicker monthDatePicker = new com.github.lgooddatepicker.components.DatePicker(dateSettings);
+        monthDatePicker.setDate(LocalDate.now());
+        monthDatePicker.addPropertyChangeListener("date", evt -> {
+            LocalDate pickedDate = monthDatePicker.getDate();
+            if (pickedDate != null) {
+                java.util.Calendar cal = java.util.Calendar.getInstance();
+                cal.set(pickedDate.getYear(), pickedDate.getMonthValue() - 1, pickedDate.getDayOfMonth());
+                currentMonth = cal;
+                updateMonthDisplay();
+                fillCalendarGrid();
+            }
+        });
+        
+        // Wszystko w jednej linii: Poprzedni | Nagłówek | DatePicker | Następny
+        navPanel.add(prevMonthBtn);
+        navPanel.add(monthLabel);
+        navPanel.add(monthDatePicker);
+        navPanel.add(nextMonthBtn);
         panel.add(navPanel, BorderLayout.NORTH);
 
         // Panel informacji o dniu (poniżej kalendarza)
         JPanel dayDetailsPanel = new JPanel(new BorderLayout(10, 10));
-        dayDetailsPanel.setBorder(BorderFactory.createTitledBorder("Szczegóły dnia"));
-        dayDetailsPanel.setPreferredSize(new Dimension(0, 80));
+        dayDetailsPanel.setBackground(new Color(250, 250, 255));
+        dayDetailsPanel.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(new Color(200, 200, 220), 2),
+            "Szczegóły wybranego dnia",
+            javax.swing.border.TitledBorder.LEFT,
+            javax.swing.border.TitledBorder.TOP,
+            new Font(Font.SANS_SERIF, Font.BOLD, 12),
+            new Color(50, 50, 70)
+        ));
+        dayDetailsPanel.setPreferredSize(new Dimension(0, 140));
         calendarDayDetailsArea = new javax.swing.JTextArea();
         calendarDayDetailsArea.setEditable(false);
         calendarDayDetailsArea.setLineWrap(true);
         calendarDayDetailsArea.setWrapStyleWord(true);
-        calendarDayDetailsArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 10));
         JScrollPane detailsScroll = new JScrollPane(calendarDayDetailsArea);
         dayDetailsPanel.add(detailsScroll, BorderLayout.CENTER);
 
         // Siatka dni 7x7 (nagłówki dni tygodnia + maks. 6 tygodni)
-        calendarGrid = new JPanel(new GridLayout(7, 7, 6, 6)); // Mniejsze przerwy
-        calendarGrid.setBackground(new Color(250, 250, 250));
+        calendarGrid = new JPanel(new GridLayout(7, 7, 4, 4));
+        calendarGrid.setBackground(new Color(255, 255, 255));
+        calendarGrid.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
-        JPanel centerPanel = new JPanel(new BorderLayout(10, 10));
-        centerPanel.add(calendarGrid, BorderLayout.CENTER);
-        centerPanel.add(dayDetailsPanel, BorderLayout.SOUTH);
-        panel.add(centerPanel, BorderLayout.CENTER);
+        // Górna część: opakowanie siatki
+        JPanel topCalendarWrapper = new JPanel(new BorderLayout(10, 10));
+        topCalendarWrapper.add(calendarGrid, BorderLayout.CENTER);
+
+        // JSplitPane dzielący kalendarz i szczegóły dnia - większy kalendarz
+        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, topCalendarWrapper, dayDetailsPanel);
+        splitPane.setResizeWeight(0.85); // Większa proporcja na kalendarz
+        splitPane.setOneTouchExpandable(true);
+        
+        panel.add(splitPane, BorderLayout.CENTER);
 
         // Inicjalizacja bieżącego miesiąca
         currentMonth = java.util.Calendar.getInstance();
         currentMonth.set(java.util.Calendar.DAY_OF_MONTH, 1);
 
-        // Zdarzenia przycisków i kontrolek
-        prevBtn.addActionListener(onAction(() -> { currentMonth.add(java.util.Calendar.MONTH, -1); syncCombosFromCalendar(); fillCalendarGrid(); }));
-        nextBtn.addActionListener(onAction(() -> { currentMonth.add(java.util.Calendar.MONTH, 1); syncCombosFromCalendar(); fillCalendarGrid(); }));
-        monthCombo.addActionListener(onAction(() -> { currentMonth.set(java.util.Calendar.MONTH, monthCombo.getSelectedIndex()); fillCalendarGrid(); }));
-        yearCombo.addActionListener(onAction(() -> { currentMonth.set(java.util.Calendar.YEAR, (Integer) yearCombo.getSelectedItem()); fillCalendarGrid(); }));
+        // Zdarzenia przycisków nawigacji miesiąca
+        prevMonthBtn.addActionListener(onAction(() -> { currentMonth.add(java.util.Calendar.MONTH, -1); updateMonthDisplay(); fillCalendarGrid(); }));
+        nextMonthBtn.addActionListener(onAction(() -> { currentMonth.add(java.util.Calendar.MONTH, 1); updateMonthDisplay(); fillCalendarGrid(); }));
 
-        // Wypełnij siatkę po raz pierwszy
-        syncCombosFromCalendar();
+        // Wypełnij kafelki po raz pierwszy
+        updateMonthDisplay();
         fillCalendarGrid();
         return panel;
     }
@@ -196,16 +197,23 @@ public class CalendarGUI extends JFrame {
     private void fillCalendarGrid() {
         calendarGrid.removeAll();
 
-        // Nagłówki dni tygodnia (Pn..Nd)
+        // Nagłówki dni tygodnia (Pn..Nd) - profesjonalny wygląd
         String[] dni = {"Pn", "Wt", "Śr", "Cz", "Pt", "So", "Nd"};
-        for (String d : dni) {
-            JLabel hdr = new JLabel(d, SwingConstants.CENTER);
-            hdr.setFont(hdr.getFont().deriveFont(Font.BOLD, 14f));
+        for (int i = 0; i < dni.length; i++) {
+            JLabel hdr = new JLabel(dni[i], SwingConstants.CENTER);
+            hdr.setFont(hdr.getFont().deriveFont(Font.BOLD, 13f));
             hdr.setOpaque(true);
-            hdr.setBackground(new Color(51, 102, 153)); // Ciemny niebieski
+            // Weekend - inny kolor
+            if (i >= 5) {
+                hdr.setBackground(new Color(80, 120, 180)); // Weekend - ciemniejszy niebieski
+            } else {
+                hdr.setBackground(new Color(70, 130, 200)); // Dzień roboczy - jasny niebieski
+            }
             hdr.setForeground(Color.WHITE);
-            hdr.setBorder(BorderFactory.createLineBorder(Color.DARK_GRAY, 1));
-            hdr.setPreferredSize(new Dimension(0, 35));
+            hdr.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(50, 90, 150), 1),
+                BorderFactory.createEmptyBorder(8, 2, 8, 2)
+            ));
             calendarGrid.add(hdr);
         }
 
@@ -238,24 +246,31 @@ public class CalendarGUI extends JFrame {
             calendarGrid.add(new JLabel(""));
         }
 
-        // Dni miesiąca
+        // Dni miesiąca - profesjonalny wygląd kafelków
         java.time.LocalDate today = java.time.LocalDate.now();
         for (int day = 1; day <= daysInMonth; day++) {
-            JPanel dayPanel = new JPanel(new BorderLayout(3, 3));
-            dayPanel.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200), 1));
+            JPanel dayPanel = new JPanel(new BorderLayout(2, 2));
+            dayPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(220, 220, 230), 1),
+                BorderFactory.createEmptyBorder(4, 4, 4, 4)
+            ));
             dayPanel.setOpaque(true);
-            dayPanel.setBackground(Color.WHITE); // Białe tło
+            dayPanel.setBackground(new Color(252, 252, 255)); // Subtelny odcień białego
 
             JLabel dayLabel = new JLabel(String.valueOf(day), SwingConstants.CENTER);
-            dayLabel.setFont(dayLabel.getFont().deriveFont(Font.BOLD, 12f));
-            dayLabel.setForeground(Color.BLACK);
+            dayLabel.setFont(dayLabel.getFont().deriveFont(Font.BOLD, 13f));
+            dayLabel.setForeground(new Color(40, 40, 50));
             dayPanel.add(dayLabel, BorderLayout.NORTH);
 
-            // Podświetl dzisiejszy dzień
+            // Podświetl dzisiejszy dzień - elegancki design
             if (today.getYear() == y && today.getMonthValue() - 1 == m && today.getDayOfMonth() == day) {
-                dayPanel.setBackground(new Color(255, 255, 200)); // Żółte tło na dziś
-                dayPanel.setBorder(BorderFactory.createLineBorder(new Color(255, 200, 0), 2));
-                dayLabel.setFont(dayLabel.getFont().deriveFont(Font.BOLD, 13f));
+                dayPanel.setBackground(new Color(255, 250, 205)); // Delikatny żółty
+                dayPanel.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(255, 215, 0), 2),
+                    BorderFactory.createEmptyBorder(3, 3, 3, 3)
+                ));
+                dayLabel.setFont(dayLabel.getFont().deriveFont(Font.BOLD, 14f));
+                dayLabel.setForeground(new Color(180, 100, 0)); // Ciemniejszy tekst
             }
 
             // Zbierz zdarzenia w tym dniu i wyświetl tytuły
@@ -337,30 +352,65 @@ public class CalendarGUI extends JFrame {
         calendarGrid.repaint();
     }
 
-    private void syncCombosFromCalendar() {
-        if (monthCombo != null) monthCombo.setSelectedIndex(currentMonth.get(java.util.Calendar.MONTH));
-        if (yearCombo != null) yearCombo.setSelectedItem(currentMonth.get(java.util.Calendar.YEAR));
+    private void updateMonthDisplay() {
+        String[] miesiace = {"Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec","Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"};
+        int currentMonthIndex = currentMonth.get(java.util.Calendar.MONTH);
+        int currentYear = currentMonth.get(java.util.Calendar.YEAR);
+        monthLabel.setText(miesiace[currentMonthIndex] + " " + currentYear);
     }
+
     
     private void createMenuBar() {
         menuBar = new JMenuBar();
         
         // File menu
         fileMenu = new JMenu("Plik");
-        JMenuItem openFileItem = new JMenuItem("Otwórz plik...");
+        JMenuItem openFileItem = new JMenuItem("Otwórz plik XML...");
         openFileItem.addActionListener(onAction(() -> {
             JFileChooser fc = new JFileChooser();
+            fc.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("XML Files (*.xml)", "xml"));
             int res = fc.showOpenDialog(this);
             if (res == JFileChooser.APPROVE_OPTION) {
-                JOptionPane.showMessageDialog(this, "Wybrano: " + fc.getSelectedFile().getAbsolutePath());
+                File selectedFile = fc.getSelectedFile();
+                try {
+                    com.fasterxml.jackson.dataformat.xml.XmlMapper mapper = new com.fasterxml.jackson.dataformat.xml.XmlMapper();
+                    mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+                    Main.MemoryContainer loadedData = mapper.readValue(selectedFile, Main.MemoryContainer.class);
+                    appMemory.kontakty = loadedData.kontakty;
+                    appMemory.zdarzenia = loadedData.zdarzenia;
+                    refreshData();
+                    JOptionPane.showMessageDialog(null, "Plik XML wczytany pomyślnie!", "Sukces", JOptionPane.INFORMATION_MESSAGE);
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(null, "Błąd wczytywania pliku: " + ex.getMessage(), "Błąd", JOptionPane.ERROR_MESSAGE);
+                }
             }
         }));
-        JMenuItem saveItem = new JMenuItem("Zapisz");
-        saveItem.addActionListener(onAction(this::saveData));
+        JMenuItem exportItem = new JMenuItem("Eksport do pliku XML...");
+        exportItem.addActionListener(onAction(() -> {
+            if (appMemory.kontakty.isEmpty() && appMemory.zdarzenia.isEmpty()) {
+                JOptionPane.showMessageDialog(null, "Pamięć RAM jest pusta. Nie ma danych do wyeksportowania.", "Brak danych", JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+            JFileChooser fc = new JFileChooser();
+            fc.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("XML Files (*.xml)", "xml"));
+            fc.setSelectedFile(new File("export.xml"));
+            int res = fc.showSaveDialog(this);
+            if (res == JFileChooser.APPROVE_OPTION) {
+                File selectedFile = fc.getSelectedFile();
+                try {
+                    com.fasterxml.jackson.dataformat.xml.XmlMapper mapper = new com.fasterxml.jackson.dataformat.xml.XmlMapper();
+                    mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+                    mapper.writerWithDefaultPrettyPrinter().writeValue(selectedFile, appMemory);
+                    JOptionPane.showMessageDialog(null, "Dane wyeksportowane do XML pomyślnie!", "Sukces", JOptionPane.INFORMATION_MESSAGE);
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(null, "Błąd eksportu: " + ex.getMessage(), "Błąd", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        }));
         JMenuItem exitItem = new JMenuItem("Wyjście");
         exitItem.addActionListener(onAction(this::saveAndExit));
         fileMenu.add(openFileItem);
-        fileMenu.add(saveItem);
+        fileMenu.add(exportItem);
         fileMenu.addSeparator();
         fileMenu.add(exitItem);
         
@@ -427,11 +477,23 @@ public class CalendarGUI extends JFrame {
         
         kontaktyTable = new JTable(kontaktyModel);
         kontaktyTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        JScrollPane scrollPane = new JScrollPane(kontaktyTable);
+        JScrollPane tableScroll = new JScrollPane(kontaktyTable);
+
+        // Panel szczegółów kontaktu (po prawej)
+        kontaktyDetailsArea = new javax.swing.JTextArea();
+        kontaktyDetailsArea.setEditable(false);
+        kontaktyDetailsArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        kontaktyDetailsArea.setLineWrap(true);
+        kontaktyDetailsArea.setWrapStyleWord(true);
+        JScrollPane detailsScroll = new JScrollPane(kontaktyDetailsArea);
+        detailsScroll.setBorder(BorderFactory.createTitledBorder("Szczegóły i zdarzenia"));
         
-        panel.add(scrollPane, BorderLayout.CENTER);
+        // JSplitPane dzielący tabelę i szczegóły
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, tableScroll, detailsScroll);
+        splitPane.setResizeWeight(0.45);
+        splitPane.setOneTouchExpandable(true);
         
-        // Przyciski dla kontaktów
+        // Panel przycisków
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         addKontaktBtn = new JButton("Dodaj");
         addKontaktBtn.addActionListener(onAction(this::addKontakt));
@@ -459,8 +521,19 @@ public class CalendarGUI extends JFrame {
         buttonPanel.add(sortByImieBtn);
         buttonPanel.add(sortByPhoneBtn);
         buttonPanel.add(sortByEmailBtn);
-        
+
+        panel.add(splitPane, BorderLayout.CENTER);
         panel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        // Nasłuch zaznaczenia
+        kontaktyTable.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                int row = kontaktyTable.getSelectedRow();
+                if (row >= 0 && row < appMemory.kontakty.size()) {
+                    showKontaktDetailsInPanel(appMemory.kontakty.get(row));
+                }
+            }
+        });
         
         return panel;
     }
@@ -480,11 +553,23 @@ public class CalendarGUI extends JFrame {
         
         zdarzeniaTable = new JTable(zdarzeniaModel);
         zdarzeniaTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        JScrollPane scrollPane = new JScrollPane(zdarzeniaTable);
+        JScrollPane tableScroll = new JScrollPane(zdarzeniaTable);
+
+        // Panel szczegółów zdarzenia (po prawej)
+        zdarzeniaDetailsArea = new javax.swing.JTextArea();
+        zdarzeniaDetailsArea.setEditable(false);
+        zdarzeniaDetailsArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        zdarzeniaDetailsArea.setLineWrap(true);
+        zdarzeniaDetailsArea.setWrapStyleWord(true);
+        JScrollPane detailsScroll = new JScrollPane(zdarzeniaDetailsArea);
+        detailsScroll.setBorder(BorderFactory.createTitledBorder("Szczegóły i uczestnicy"));
         
-        panel.add(scrollPane, BorderLayout.CENTER);
+        // JSplitPane dzielący tabelę i szczegóły
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, tableScroll, detailsScroll);
+        splitPane.setResizeWeight(0.45);
+        splitPane.setOneTouchExpandable(true);
         
-        // Przyciski dla zdarzeń
+        // Panel przycisków
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         addZdarzenieBtn = new JButton("Dodaj");
         addZdarzenieBtn.addActionListener(onAction(this::addZdarzenie));
@@ -512,8 +597,19 @@ public class CalendarGUI extends JFrame {
         buttonPanel.add(sortByTitleBtn);
         buttonPanel.add(sortByDescBtn);
         buttonPanel.add(sortByLinkBtn);
-        
+
+        panel.add(splitPane, BorderLayout.CENTER);
         panel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        // Nasłuch zaznaczenia
+        zdarzeniaTable.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                int row = zdarzeniaTable.getSelectedRow();
+                if (row >= 0 && row < appMemory.zdarzenia.size()) {
+                    showZdarzenieDetailsInPanel(appMemory.zdarzenia.get(row));
+                }
+            }
+        });
         
         return panel;
     }
@@ -538,7 +634,7 @@ public class CalendarGUI extends JFrame {
         
         return panel;
     }
-    
+
     private void refreshData() {
         // Wyczyść tabele
         kontaktyModel.setRowCount(0);
@@ -562,6 +658,14 @@ public class CalendarGUI extends JFrame {
                 z.getData(),
                 z.getMiejsce()
             });
+        }
+
+        // Odśwież widok kalendarza oraz wyczyść szczegóły dnia
+        if (calendarDayDetailsArea != null) {
+            calendarDayDetailsArea.setText("");
+        }
+        if (calendarGrid != null) {
+            fillCalendarGrid();
         }
     }
     
@@ -700,7 +804,13 @@ public class CalendarGUI extends JFrame {
         
         JTextField tytulField = new JTextField();
         JTextField opisField = new JTextField();
-        JTextField dataField = new JTextField("YYYY-MM-DD");
+        
+        // DatePickerPanel - gotowy calendar picker
+        com.github.lgooddatepicker.components.DatePickerSettings settings = new com.github.lgooddatepicker.components.DatePickerSettings();
+        settings.setFormatForDatesCommonEra("yyyy-MM-dd");
+        com.github.lgooddatepicker.components.DatePicker datePicker = new com.github.lgooddatepicker.components.DatePicker(settings);
+        datePicker.setDate(LocalDate.now());
+        
         JTextField linkField = new JTextField();
         
         editPanel.add(new JLabel("Tytuł:"));
@@ -708,7 +818,7 @@ public class CalendarGUI extends JFrame {
         editPanel.add(new JLabel("Opis:"));
         editPanel.add(opisField);
         editPanel.add(new JLabel("Data:"));
-        editPanel.add(dataField);
+        editPanel.add(datePicker);
         editPanel.add(new JLabel("Link:"));
         editPanel.add(linkField);
         
@@ -788,10 +898,12 @@ public class CalendarGUI extends JFrame {
         
         okBtn.addActionListener(onAction(() -> {
             try {
+                LocalDate selectedDate = datePicker.getDate();
+                if (selectedDate == null) selectedDate = LocalDate.now();
                 Zdarzenie z = new Zdarzenie(
                     tytulField.getText(),
                     opisField.getText(),
-                    LocalDate.parse(dataField.getText()),
+                    selectedDate,
                     java.net.URI.create(linkField.getText()).toURL()
                 );
                 for (Kontakt k : tempParticipants) {
@@ -837,7 +949,13 @@ public class CalendarGUI extends JFrame {
         
         JTextField tytulField = new JTextField(z.getTytul());
         JTextField opisField = new JTextField(z.getOpis());
-        JTextField dataField = new JTextField(z.getData().toString());
+        
+        // DatePickerPanel - gotowy calendar picker
+        com.github.lgooddatepicker.components.DatePickerSettings settings = new com.github.lgooddatepicker.components.DatePickerSettings();
+        settings.setFormatForDatesCommonEra("yyyy-MM-dd");
+        com.github.lgooddatepicker.components.DatePicker datePicker = new com.github.lgooddatepicker.components.DatePicker(settings);
+        datePicker.setDate(z.getData());
+        
         JTextField linkField = new JTextField(z.getMiejsce() != null ? z.getMiejsce().toString() : "");
         
         editPanel.add(new JLabel("Tytuł:"));
@@ -845,7 +963,7 @@ public class CalendarGUI extends JFrame {
         editPanel.add(new JLabel("Opis:"));
         editPanel.add(opisField);
         editPanel.add(new JLabel("Data:"));
-        editPanel.add(dataField);
+        editPanel.add(datePicker);
         editPanel.add(new JLabel("Link:"));
         editPanel.add(linkField);
         
@@ -932,7 +1050,9 @@ public class CalendarGUI extends JFrame {
             try {
                 z.setTytul(tytulField.getText());
                 z.setOpis(opisField.getText());
-                z.setData(LocalDate.parse(dataField.getText()));
+                LocalDate pickedDate = datePicker.getDate();
+                if (pickedDate == null) pickedDate = LocalDate.now();
+                z.setData(pickedDate);
                 z.setMiejsce(java.net.URI.create(linkField.getText()).toURL());
                 refreshData();
                 dialog.dispose();
@@ -992,11 +1112,26 @@ public class CalendarGUI extends JFrame {
     }
     
     private void saveAndExit() {
-        int confirm = JOptionPane.showConfirmDialog(this, "Zapisać zmiany przed wyjściem?", "Potwierdzenie", JOptionPane.YES_NO_CANCEL_OPTION);
-        if (confirm == JOptionPane.YES_OPTION) {
+        String[] options = {"Zapisz i wyjdź", "Nie zapisuj i wyjdź", "Anuluj"};
+        int choice = JOptionPane.showOptionDialog(
+                this,
+                "Zapisać zmiany przed wyjściem?",
+                "Potwierdzenie",
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                options,
+                options[0]
+        );
+
+        if (choice == 0) { // Zapisz i wyjdź
             saveData();
+            System.exit(0);
+        } else if (choice == 1) { // Nie zapisuj i wyjdź
+            System.exit(0);
+        } else {
+            // Anuluj — nic nie rób
         }
-        System.exit(0);
     }
 
     // === Funkcje konsolowe odwzorowane w GUI ===
@@ -1064,7 +1199,7 @@ public class CalendarGUI extends JFrame {
     private void manageKontaktZdarzeniaDialog() {
         int row = kontaktyTable.getSelectedRow();
         if (row < 0) {
-            JOptionPane.showMessageDialog(this, "Wybierz kontakt w zakładce Kontakty.", "Info", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(null, "Wybierz kontakt w zakładce Kontakty.", "Info", JOptionPane.INFORMATION_MESSAGE);
             tabbedPane.setSelectedIndex(0);
             return;
         }
@@ -1105,7 +1240,7 @@ public class CalendarGUI extends JFrame {
         btns.add(addBtn); btns.add(removeBtn); btns.add(closeBtn);
         panel.add(btns, BorderLayout.SOUTH);
 
-        JDialog dialog = new JDialog(this, "Relacje: Kontakt ↔ Zdarzenie", true);
+        JDialog dialog = new JDialog((java.awt.Frame) null, "Relacje: Kontakt ↔ Zdarzenie", true);
         dialog.setSize(600, 400);
         dialog.setLocationRelativeTo(this);
         dialog.getContentPane().add(panel);
@@ -1136,7 +1271,7 @@ public class CalendarGUI extends JFrame {
     private void manageZdarzenieUczestnicyDialog() {
         int row = zdarzeniaTable.getSelectedRow();
         if (row < 0) {
-            JOptionPane.showMessageDialog(this, "Wybierz zdarzenie w zakładce Zdarzenia.", "Info", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(null, "Wybierz zdarzenie w zakładce Zdarzenia.", "Info", JOptionPane.INFORMATION_MESSAGE);
             tabbedPane.setSelectedIndex(1);
             return;
         }
@@ -1175,7 +1310,7 @@ public class CalendarGUI extends JFrame {
         btns.add(addBtn); btns.add(removeBtn); btns.add(closeBtn);
         panel.add(btns, BorderLayout.SOUTH);
 
-        JDialog dialog = new JDialog(this, "Relacje: Zdarzenie ↔ Kontakty", true);
+        JDialog dialog = new JDialog((java.awt.Frame) null, "Relacje: Zdarzenie ↔ Kontakty", true);
         dialog.setSize(600, 400);
         dialog.setLocationRelativeTo(this);
         dialog.getContentPane().add(panel);
@@ -1209,7 +1344,7 @@ public class CalendarGUI extends JFrame {
         area.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
         JScrollPane scroll = new JScrollPane(area);
         scroll.setPreferredSize(new Dimension(700, 450));
-        JOptionPane.showMessageDialog(this, scroll, title, JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(null, scroll, title, JOptionPane.INFORMATION_MESSAGE);
     }
 
     // === Wyświetlanie szczegółów dnia w panelu (poniżej kalendarza) ===
@@ -1247,181 +1382,77 @@ public class CalendarGUI extends JFrame {
         }
     }
 
-    // === Okno dnia: lista zdarzeń + akcje ===
-    private void openDayDialog(java.time.LocalDate date) {
-        java.util.List<Zdarzenie> eventsForDay = new java.util.ArrayList<>();
-        for (Zdarzenie z : appMemory.zdarzenia) {
-            java.time.LocalDate d = z.getData();
-            if (d != null && d.equals(date)) {
-                eventsForDay.add(z);
+    // Mini okno: prezentacja szczegółów dla kliknięć w listach
+    private void showKontaktDetailsInPanel(Kontakt k) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("╔═══════════════════════════════════╗\n");
+        sb.append("║      SZCZEGÓŁY KONTAKTU           ║\n");
+        sb.append("╚═══════════════════════════════════╝\n\n");
+        sb.append("Imię:      ").append(k.getImie()).append("\n");
+        sb.append("Nazwisko:  ").append(k.getNazwisko()).append("\n");
+        if (k.getTelStr() != null && !k.getTelStr().isBlank()) 
+            sb.append("Telefon:   ").append(k.getTelStr()).append("\n");
+        if (k.getEmailStr() != null && !k.getEmailStr().isBlank()) 
+            sb.append("Email:     ").append(k.getEmailStr()).append("\n");
+        
+        java.util.List<Zdarzenie> events = k.getZdarzenia();
+        sb.append("\n╔══════════════════════════════════╗\n");
+        sb.append("║  ZDARZENIA (").append(String.format("%2d", events != null ? events.size() : 0)).append(")                ║\n");
+        sb.append("╚══════════════════════════════════╝\n");
+        
+        if (events == null || events.isEmpty()) {
+            sb.append("\n  ► Brak przypisanych zdarzeń\n");
+        } else {
+            for (int i = 0; i < events.size(); i++) {
+                Zdarzenie z = events.get(i);
+                sb.append(String.format("\n  ► [%d] %s\n", i + 1, 
+                    (z.getTytul() != null ? z.getTytul() : "(bez tytułu)")));
+                sb.append("      Data: ").append(z.getData()).append("\n");
+                if (z.getOpis() != null && !z.getOpis().isBlank())
+                    sb.append("      Opis: ").append(z.getOpis()).append("\n");
             }
         }
-
-        javax.swing.DefaultListModel<String> model = new javax.swing.DefaultListModel<>();
-        for (Zdarzenie z : eventsForDay) {
-            String title = z.getTytul() != null ? z.getTytul() : "(bez tytułu)";
-            String line = "[" + z.getData() + "] " + title + (z.getOpis() != null && !z.getOpis().isBlank() ? " — " + z.getOpis() : "");
-            model.addElement(line);
+        
+        if (kontaktyDetailsArea != null) {
+            kontaktyDetailsArea.setText(sb.toString());
+            kontaktyDetailsArea.setCaretPosition(0);
         }
-
-        JList<String> list = new JList<>(model);
-        list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        JScrollPane scroll = new JScrollPane(list);
-
-        JPanel btns = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton addBtn = new JButton("Dodaj");
-        JButton editBtn = new JButton("Edytuj");
-        JButton delBtn = new JButton("Usuń");
-        JButton closeBtn = new JButton("Zamknij");
-        btns.add(addBtn); btns.add(editBtn); btns.add(delBtn); btns.add(closeBtn);
-
-        JPanel content = new JPanel(new BorderLayout(10, 10));
-        content.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        content.add(new JLabel("Dzień: " + date), BorderLayout.NORTH);
-        content.add(scroll, BorderLayout.CENTER);
-        content.add(btns, BorderLayout.SOUTH);
-
-        JDialog dialog = new JDialog(this, "Zdarzenia dnia", true);
-        dialog.setSize(600, 400);
-        dialog.setLocationRelativeTo(this);
-        dialog.getContentPane().add(content);
-
-        addBtn.addActionListener(onAction(() -> {
-            addZdarzenieForDate(date);
-            refreshData();
-            fillCalendarGrid();
-            // Odśwież listę
-            model.clear();
-            for (Zdarzenie z : appMemory.zdarzenia) {
-                if (z.getData() != null && z.getData().equals(date)) {
-                    String title = z.getTytul() != null ? z.getTytul() : "(bez tytułu)";
-                    String line = "[" + z.getData() + "] " + title + (z.getOpis() != null && !z.getOpis().isBlank() ? " — " + z.getOpis() : "");
-                    model.addElement(line);
-                }
-            }
-        }));
-
-        editBtn.addActionListener(onAction(() -> {
-            int idx = list.getSelectedIndex();
-            if (idx < 0) return;
-            Zdarzenie z = eventsForDay.get(idx);
-            editZdarzenieObject(z);
-            refreshData();
-            fillCalendarGrid();
-            // odśwież
-            model.set(idx, "[" + z.getData() + "] " + (z.getTytul() != null ? z.getTytul() : "(bez tytułu)") + (z.getOpis() != null && !z.getOpis().isBlank() ? " — " + z.getOpis() : ""));
-        }));
-
-        delBtn.addActionListener(onAction(() -> {
-            int idx = list.getSelectedIndex();
-            if (idx < 0) return;
-            Zdarzenie z = eventsForDay.get(idx);
-            int confirm = JOptionPane.showConfirmDialog(this, "Usunąć wybrane zdarzenie?", "Potwierdzenie", JOptionPane.YES_NO_OPTION);
-            if (confirm == JOptionPane.YES_OPTION) {
-                appMemory.zdarzenia.remove(z);
-                eventsForDay.remove(idx);
-                model.remove(idx);
-                refreshData();
-                fillCalendarGrid();
-            }
-        }));
-
-        closeBtn.addActionListener(onAction(dialog::dispose));
-        dialog.setVisible(true);
     }
 
-    private void addZdarzenieForDate(java.time.LocalDate date) {
-        JDialog dialog = new JDialog(this, "Dodaj Zdarzenie (" + date + ")", true);
-        dialog.setSize(400, 300);
-        dialog.setLocationRelativeTo(this);
-
-        JPanel panel = new JPanel(new GridLayout(5, 2, 10, 10));
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-
-        JTextField tytulField = new JTextField();
-        JTextField opisField = new JTextField();
-        JTextField dataField = new JTextField(date.toString());
-        JTextField linkField = new JTextField();
-
-        panel.add(new JLabel("Tytuł:"));
-        panel.add(tytulField);
-        panel.add(new JLabel("Opis:"));
-        panel.add(opisField);
-        panel.add(new JLabel("Data:"));
-        panel.add(dataField);
-        panel.add(new JLabel("Link:"));
-        panel.add(linkField);
-
-        JButton okBtn = new JButton("OK");
-        JButton cancelBtn = new JButton("Anuluj");
-
-        okBtn.addActionListener(onAction(() -> {
-            try {
-                Zdarzenie z = new Zdarzenie(
-                    tytulField.getText(),
-                    opisField.getText(),
-                    java.time.LocalDate.parse(dataField.getText()),
-                    java.net.URI.create(linkField.getText()).toURL()
-                );
-                appMemory.zdarzenia.add(z);
-                refreshData();
-                dialog.dispose();
-                JOptionPane.showMessageDialog(this, "Zdarzenie dodane pomyślnie!");
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Błąd: " + ex.getMessage(), "Błąd", JOptionPane.ERROR_MESSAGE);
+    private void showZdarzenieDetailsInPanel(Zdarzenie z) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("╔═══════════════════════════════════╗\n");
+        sb.append("║      SZCZEGÓŁY ZDARZENIA          ║\n");
+        sb.append("╚═══════════════════════════════════╝\n\n");
+        sb.append("Tytuł:     ").append(z.getTytul() != null ? z.getTytul() : "(bez tytułu)").append("\n");
+        if (z.getData() != null) 
+            sb.append("Data:      ").append(z.getData()).append("\n");
+        if (z.getOpis() != null && !z.getOpis().isBlank()) 
+            sb.append("Opis:      ").append(z.getOpis()).append("\n");
+        if (z.getMiejsce() != null) 
+            sb.append("Link:      ").append(z.getMiejsce()).append("\n");
+        
+        java.util.List<Kontakt> kontakty = z.getKontakty();
+        sb.append("\n╔══════════════════════════════════╗\n");
+        sb.append("║  UCZESTNICY (").append(String.format("%2d", kontakty != null ? kontakty.size() : 0)).append(")           ║\n");
+        sb.append("╚══════════════════════════════════╝\n");
+        
+        if (kontakty == null || kontakty.isEmpty()) {
+            sb.append("\n  ► Brak przypisanych uczestników\n");
+        } else {
+            for (int i = 0; i < kontakty.size(); i++) {
+                Kontakt k = kontakty.get(i);
+                sb.append(String.format("\n  ► [%d] %s %s\n", i + 1, k.getNazwisko(), k.getImie()));
+                if (k.getTelStr() != null && !k.getTelStr().isBlank())
+                    sb.append("      Tel:   ").append(k.getTelStr()).append("\n");
+                if (k.getEmailStr() != null && !k.getEmailStr().isBlank())
+                    sb.append("      Email: ").append(k.getEmailStr()).append("\n");
             }
-        }));
-
-        cancelBtn.addActionListener(onAction(dialog::dispose));
-        panel.add(okBtn);
-        panel.add(cancelBtn);
-        dialog.getContentPane().add(panel);
-        dialog.setVisible(true);
-    }
-
-    private void editZdarzenieObject(Zdarzenie z) {
-        JDialog dialog = new JDialog(this, "Edytuj Zdarzenie", true);
-        dialog.setSize(400, 300);
-        dialog.setLocationRelativeTo(this);
-
-        JPanel panel = new JPanel(new GridLayout(5, 2, 10, 10));
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-
-        JTextField tytulField = new JTextField(z.getTytul());
-        JTextField opisField = new JTextField(z.getOpis());
-        JTextField dataField = new JTextField(z.getData().toString());
-        JTextField linkField = new JTextField(z.getMiejsce() != null ? z.getMiejsce().toString() : "");
-
-        panel.add(new JLabel("Tytuł:"));
-        panel.add(tytulField);
-        panel.add(new JLabel("Opis:"));
-        panel.add(opisField);
-        panel.add(new JLabel("Data:"));
-        panel.add(dataField);
-        panel.add(new JLabel("Link:"));
-        panel.add(linkField);
-
-        JButton okBtn = new JButton("OK");
-        JButton cancelBtn = new JButton("Anuluj");
-
-        okBtn.addActionListener(onAction(() -> {
-            try {
-                z.setTytul(tytulField.getText());
-                z.setOpis(opisField.getText());
-                z.setData(java.time.LocalDate.parse(dataField.getText()));
-                z.setMiejsce(java.net.URI.create(linkField.getText()).toURL());
-                refreshData();
-                dialog.dispose();
-                JOptionPane.showMessageDialog(this, "Zdarzenie zaktualizowane!");
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Błąd: " + ex.getMessage(), "Błąd", JOptionPane.ERROR_MESSAGE);
-            }
-        }));
-
-        cancelBtn.addActionListener(onAction(dialog::dispose));
-        panel.add(okBtn);
-        panel.add(cancelBtn);
-        dialog.getContentPane().add(panel);
-        dialog.setVisible(true);
+        }
+        
+        if (zdarzeniaDetailsArea != null) {
+            zdarzeniaDetailsArea.setText(sb.toString());
+            zdarzeniaDetailsArea.setCaretPosition(0);
+        }
     }
 }

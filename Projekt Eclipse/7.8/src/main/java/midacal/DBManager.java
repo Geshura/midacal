@@ -258,66 +258,113 @@ public class DBManager {
     }
     
     /**
-     * Zapisuje kontakty do bazy i zwraca mapę obiekt -> nowe ID
+     * Zapisuje kontakty do bazy - UPDATE jeśli istnieje ID, INSERT jeśli nowy
      */
     private Map<Kontakt, Long> saveKontakty(List<Kontakt> kontakty) throws SQLException {
         Map<Kontakt, Long> idMap = new HashMap<>();
-        String sql = "INSERT INTO kontakty (imie, nazwisko, telefon, email) VALUES (?, ?, ?, ?)";
-        PreparedStatement pstmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
         
         for (Kontakt k : kontakty) {
-            pstmt.setString(1, k.getImie());
-            pstmt.setString(2, k.getNazwisko());
-            pstmt.setString(3, k.getTelStr());
-            pstmt.setString(4, k.getEmailStr());
-            pstmt.executeUpdate();
-            
-            ResultSet rs = pstmt.getGeneratedKeys();
-            if (rs.next()) {
-                Long newId = rs.getLong(1);
-                k.setId(newId);
-                idMap.put(k, newId);
+            if (k.getId() != null && k.getId() > 0) {
+                // UPDATE dla istniejącego kontaktu
+                String sql = "UPDATE kontakty SET imie=?, nazwisko=?, telefon=?, email=? WHERE id=?";
+                PreparedStatement pstmt = connection.prepareStatement(sql);
+                pstmt.setString(1, k.getImie());
+                pstmt.setString(2, k.getNazwisko());
+                pstmt.setString(3, k.getTelStr());
+                pstmt.setString(4, k.getEmailStr());
+                pstmt.setLong(5, k.getId());
+                pstmt.executeUpdate();
+                pstmt.close();
+                idMap.put(k, k.getId());
+            } else {
+                // INSERT dla nowego kontaktu
+                String sql = "INSERT INTO kontakty (imie, nazwisko, telefon, email) VALUES (?, ?, ?, ?)";
+                PreparedStatement pstmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+                pstmt.setString(1, k.getImie());
+                pstmt.setString(2, k.getNazwisko());
+                pstmt.setString(3, k.getTelStr());
+                pstmt.setString(4, k.getEmailStr());
+                pstmt.executeUpdate();
+                
+                ResultSet rs = pstmt.getGeneratedKeys();
+                if (rs.next()) {
+                    Long newId = rs.getLong(1);
+                    k.setId(newId);
+                    idMap.put(k, newId);
+                }
+                rs.close();
+                pstmt.close();
             }
-            rs.close();
         }
         
-        pstmt.close();
         return idMap;
     }
     
     /**
-     * Zapisuje zdarzenia do bazy i zwraca mapę obiekt -> nowe ID
+     * Zapisuje zdarzenia do bazy - UPDATE jeśli istnieje ID, INSERT jeśli nowe
      */
     private Map<Zdarzenie, Long> saveZdarzenia(List<Zdarzenie> zdarzenia) throws SQLException {
         Map<Zdarzenie, Long> idMap = new HashMap<>();
-        String sql = "INSERT INTO zdarzenia (tytul, opis, data, link) VALUES (?, ?, ?, ?)";
-        PreparedStatement pstmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
         
         for (Zdarzenie z : zdarzenia) {
-            pstmt.setString(1, z.getTytul());
-            pstmt.setString(2, z.getOpis());
-            pstmt.setString(3, z.getData().toString());
-            pstmt.setString(4, z.getMiejsce() != null ? z.getMiejsce().toString() : null);
-            pstmt.executeUpdate();
-            
-            ResultSet rs = pstmt.getGeneratedKeys();
-            if (rs.next()) {
-                Long newId = rs.getLong(1);
-                z.setId(newId);
-                idMap.put(z, newId);
+            if (z.getId() != null && z.getId() > 0) {
+                // UPDATE dla istniejącego zdarzenia
+                String sql = "UPDATE zdarzenia SET tytul=?, opis=?, data=?, link=? WHERE id=?";
+                PreparedStatement pstmt = connection.prepareStatement(sql);
+                pstmt.setString(1, z.getTytul());
+                pstmt.setString(2, z.getOpis());
+                pstmt.setString(3, z.getData().toString());
+                pstmt.setString(4, z.getMiejsce() != null ? z.getMiejsce().toString() : null);
+                pstmt.setLong(5, z.getId());
+                pstmt.executeUpdate();
+                pstmt.close();
+                idMap.put(z, z.getId());
+            } else {
+                // INSERT dla nowego zdarzenia
+                String sql = "INSERT INTO zdarzenia (tytul, opis, data, link) VALUES (?, ?, ?, ?)";
+                PreparedStatement pstmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+                pstmt.setString(1, z.getTytul());
+                pstmt.setString(2, z.getOpis());
+                pstmt.setString(3, z.getData().toString());
+                pstmt.setString(4, z.getMiejsce() != null ? z.getMiejsce().toString() : null);
+                pstmt.executeUpdate();
+                
+                ResultSet rs = pstmt.getGeneratedKeys();
+                if (rs.next()) {
+                    Long newId = rs.getLong(1);
+                    z.setId(newId);
+                    idMap.put(z, newId);
+                }
+                rs.close();
+                pstmt.close();
             }
-            rs.close();
         }
         
-        pstmt.close();
         return idMap;
     }
     
     /**
-     * Zapisuje relacje do tabeli asocjacyjnej
+     * Zapisuje relacje do tabeli asocjacyjnej - najpierw czyści stare, potem dodaje nowe
      */
     private void saveRelacje(List<Kontakt> kontakty, List<Zdarzenie> zdarzenia,
                             Map<Kontakt, Long> kontaktyIdMap, Map<Zdarzenie, Long> zdarzeniaIdMap) throws SQLException {
+        // Najpierw wyczyść stare relacje (ale NIE całą tabelę, bo mogą być inne rekordy)
+        // Usuwamy tylko relacje dla zdarzeń które mamy w pamięci
+        Statement stmt = connection.createStatement();
+        StringBuilder deleteIds = new StringBuilder();
+        for (Zdarzenie z : zdarzenia) {
+            Long zId = zdarzeniaIdMap.get(z);
+            if (zId != null) {
+                if (deleteIds.length() > 0) deleteIds.append(",");
+                deleteIds.append(zId);
+            }
+        }
+        if (deleteIds.length() > 0) {
+            stmt.execute("DELETE FROM kontakty_zdarzenia WHERE zdarzenie_id IN (" + deleteIds + ")");
+        }
+        stmt.close();
+        
+        // Teraz dodaj nowe relacje
         String sql = "INSERT INTO kontakty_zdarzenia (kontakt_id, zdarzenie_id) VALUES (?, ?)";
         PreparedStatement pstmt = connection.prepareStatement(sql);
         
