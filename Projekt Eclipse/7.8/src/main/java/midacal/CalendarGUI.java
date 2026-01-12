@@ -1,18 +1,50 @@
 package midacal;
 
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.File;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.Collections;
 
-import javax.swing.*;
+import javax.swing.BorderFactory;
+import javax.swing.DefaultListModel;
+import javax.swing.JButton;
+import javax.swing.JColorChooser;
+import javax.swing.JDialog;
+import javax.swing.JFileChooser;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JProgressBar;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTabbedPane;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
+import javax.swing.SwingConstants;
 import javax.swing.table.DefaultTableModel;
 
 public class CalendarGUI extends JFrame {
     private static final long serialVersionUID = 1L;
     private final Main.MemoryContainer appMemory;
     private final DBManager dbManager;
+    
+    // Mechanizm auto-zapisu
+    private int changeCounter = 0;
+    private static final int CHANGE_INTERVAL = 10; // Co 10 zmian -> auto-zapis do bazy
     
     // Komponenty
     private JTabbedPane tabbedPane;
@@ -36,9 +68,11 @@ public class CalendarGUI extends JFrame {
     
     private javax.swing.JTextArea calendarDayDetailsArea; // Panel szczegółów dnia w kalendarzu
     
-    // Szczegóły paneli dla Kontaktów i Zdarzeń
+    // Szczegóły paneli dla Kontaktów i Zdarzeń - podzielone na sekcje
     private javax.swing.JTextArea kontaktyDetailsArea;
+    private javax.swing.JTextArea kontaktyEventsArea;
     private javax.swing.JTextArea zdarzeniaDetailsArea;
+    private javax.swing.JTextArea zdarzeniaParticipantsArea;
     
     public CalendarGUI(Main.MemoryContainer memory, DBManager dbMgr) {
         this.appMemory = memory;
@@ -479,17 +513,31 @@ public class CalendarGUI extends JFrame {
         kontaktyTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         JScrollPane tableScroll = new JScrollPane(kontaktyTable);
 
-        // Panel szczegółów kontaktu (po prawej)
+        // Panel szczegółów kontaktu (góra) - prosty tekst
         kontaktyDetailsArea = new javax.swing.JTextArea();
         kontaktyDetailsArea.setEditable(false);
-        kontaktyDetailsArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
         kontaktyDetailsArea.setLineWrap(true);
         kontaktyDetailsArea.setWrapStyleWord(true);
+        kontaktyDetailsArea.setMargin(new Insets(10, 10, 10, 10));
         JScrollPane detailsScroll = new JScrollPane(kontaktyDetailsArea);
-        detailsScroll.setBorder(BorderFactory.createTitledBorder("Szczegóły i zdarzenia"));
+        detailsScroll.setBorder(BorderFactory.createTitledBorder("Szczegóły kontaktu"));
         
-        // JSplitPane dzielący tabelę i szczegóły
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, tableScroll, detailsScroll);
+        // Panel przypisanych zdarzeń (dół) - prosty tekst
+        kontaktyEventsArea = new javax.swing.JTextArea();
+        kontaktyEventsArea.setEditable(false);
+        kontaktyEventsArea.setLineWrap(true);
+        kontaktyEventsArea.setWrapStyleWord(true);
+        kontaktyEventsArea.setMargin(new Insets(10, 10, 10, 10));
+        JScrollPane eventsScroll = new JScrollPane(kontaktyEventsArea);
+        eventsScroll.setBorder(BorderFactory.createTitledBorder("Przypisane zdarzenia"));
+        
+        // JSplitPane pionowy dzielący szczegóły kontaktu i zdarzenia
+        JSplitPane rightSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, detailsScroll, eventsScroll);
+        rightSplitPane.setResizeWeight(0.4);
+        rightSplitPane.setOneTouchExpandable(true);
+        
+        // JSplitPane poziomy dzielący tabelę i panel szczegółów
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, tableScroll, rightSplitPane);
         splitPane.setResizeWeight(0.45);
         splitPane.setOneTouchExpandable(true);
         
@@ -555,17 +603,31 @@ public class CalendarGUI extends JFrame {
         zdarzeniaTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         JScrollPane tableScroll = new JScrollPane(zdarzeniaTable);
 
-        // Panel szczegółów zdarzenia (po prawej)
+        // Panel szczegółów zdarzenia (góra) - prosty tekst
         zdarzeniaDetailsArea = new javax.swing.JTextArea();
         zdarzeniaDetailsArea.setEditable(false);
-        zdarzeniaDetailsArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
         zdarzeniaDetailsArea.setLineWrap(true);
         zdarzeniaDetailsArea.setWrapStyleWord(true);
+        zdarzeniaDetailsArea.setMargin(new Insets(10, 10, 10, 10));
         JScrollPane detailsScroll = new JScrollPane(zdarzeniaDetailsArea);
-        detailsScroll.setBorder(BorderFactory.createTitledBorder("Szczegóły i uczestnicy"));
+        detailsScroll.setBorder(BorderFactory.createTitledBorder("Szczegóły zdarzenia"));
         
-        // JSplitPane dzielący tabelę i szczegóły
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, tableScroll, detailsScroll);
+        // Panel uczestników (dół) - prosty tekst
+        zdarzeniaParticipantsArea = new javax.swing.JTextArea();
+        zdarzeniaParticipantsArea.setEditable(false);
+        zdarzeniaParticipantsArea.setLineWrap(true);
+        zdarzeniaParticipantsArea.setWrapStyleWord(true);
+        zdarzeniaParticipantsArea.setMargin(new Insets(10, 10, 10, 10));
+        JScrollPane participantsScroll = new JScrollPane(zdarzeniaParticipantsArea);
+        participantsScroll.setBorder(BorderFactory.createTitledBorder("Uczestnicy"));
+        
+        // JSplitPane pionowy dzielący szczegóły zdarzenia i uczestników
+        JSplitPane rightSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, detailsScroll, participantsScroll);
+        rightSplitPane.setResizeWeight(0.5);
+        rightSplitPane.setOneTouchExpandable(true);
+        
+        // JSplitPane poziomy dzielący tabelę i panel szczegółów
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, tableScroll, rightSplitPane);
         splitPane.setResizeWeight(0.45);
         splitPane.setOneTouchExpandable(true);
         
@@ -620,6 +682,12 @@ public class CalendarGUI extends JFrame {
         refreshBtn = new JButton("Odśwież");
         refreshBtn.addActionListener(onAction(this::refreshData));
         
+        JButton loadXmlBtn = new JButton("Wczytaj XML");
+        loadXmlBtn.addActionListener(onAction(this::loadDataFromXml));
+        
+        JButton saveXmlBtn = new JButton("Zapisz XML");
+        saveXmlBtn.addActionListener(onAction(this::saveDataToXml));
+        
         saveBtn = new JButton("Zapisz do bazy");
         saveBtn.addActionListener(onAction(this::saveData));
 
@@ -630,9 +698,40 @@ public class CalendarGUI extends JFrame {
         panel.add(progressBar);
         
         panel.add(refreshBtn);
+        panel.add(loadXmlBtn);
+        panel.add(saveXmlBtn);
         panel.add(saveBtn);
         
         return panel;
+    }
+
+    private void loadDataFromXml() {
+        try {
+            System.out.println("[GUI] Wczytywanie danych z XML...");
+            Main.loadFromXml();
+            appMemory.kontakty = Main.appMemory.kontakty;
+            appMemory.zdarzenia = Main.appMemory.zdarzenia;
+            System.out.println("[GUI] Wczytano z XML pomyślnie!");
+            refreshData();
+        } catch (Exception e) {
+            System.err.println("[GUI ERROR] Błąd wczytywania XML: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "Błąd wczytywania XML:\n" + e.getMessage(), 
+                "Błąd", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void saveDataToXml() {
+        try {
+            System.out.println("[GUI] Zapisywanie danych do XML...");
+            Main.saveToXml();
+            System.out.println("[GUI] Zapisano do XML pomyślnie!");
+            JOptionPane.showMessageDialog(this, "Dane zapisane do XML pomyślnie!", 
+                "Sukces", JOptionPane.INFORMATION_MESSAGE);
+        } catch (Exception e) {
+            System.err.println("[GUI ERROR] Błąd zapisywania XML: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "Błąd zapisywania XML:\n" + e.getMessage(), 
+                "Błąd", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void refreshData() {
@@ -669,32 +768,72 @@ public class CalendarGUI extends JFrame {
         }
     }
     
+    // Mechanizm auto-zapisu co 10 zmian
+    private void markChanged() {
+        changeCounter++;
+        if (changeCounter >= CHANGE_INTERVAL) {
+            System.out.println("[AUTO] Backup do bazy po " + changeCounter + " zmianach w RAM...");
+            dbManager.saveToDatabase(appMemory);
+            // Auto-save do XML co 10 zmian (dla dodatkowego backup'u)
+            try {
+                System.out.println("[AUTO] Auto-backup do XML...");
+                Main.saveToXml();
+            } catch (Exception e) {
+                System.err.println("[AUTO ERROR] Nie udało się auto-zapisać do XML: " + e.getMessage());
+            }
+            changeCounter = 0;
+        }
+    }
+    
     private void addKontakt() {
         JDialog dialog = new JDialog((java.awt.Frame) null, "Dodaj Kontakt", true);
-        dialog.setSize(400, 300);
+        dialog.setSize(600, 500);
         dialog.setLocationRelativeTo(this);
         
-        JPanel panel = new JPanel(new GridLayout(5, 2, 10, 10));
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         
-        JLabel imieLabel = new JLabel("Imię:");
+        // Panel z podstawowymi danymi
+        JPanel dataPanel = new JPanel(new GridLayout(4, 2, 10, 10));
+        dataPanel.setBorder(BorderFactory.createTitledBorder("Dane kontaktu"));
+        
         JTextField imieField = new JTextField();
-        JLabel nazwiskoLabel = new JLabel("Nazwisko:");
         JTextField nazwiskoField = new JTextField();
-        JLabel telLabel = new JLabel("Telefon:");
         JTextField telField = new JTextField();
-        JLabel emailLabel = new JLabel("Email:");
         JTextField emailField = new JTextField();
         
-        panel.add(imieLabel);
-        panel.add(imieField);
-        panel.add(nazwiskoLabel);
-        panel.add(nazwiskoField);
-        panel.add(telLabel);
-        panel.add(telField);
-        panel.add(emailLabel);
-        panel.add(emailField);
+        dataPanel.add(new JLabel("Imię:"));
+        dataPanel.add(imieField);
+        dataPanel.add(new JLabel("Nazwisko:"));
+        dataPanel.add(nazwiskoField);
+        dataPanel.add(new JLabel("Telefon:"));
+        dataPanel.add(telField);
+        dataPanel.add(new JLabel("Email:"));
+        dataPanel.add(emailField);
         
+        mainPanel.add(dataPanel, BorderLayout.NORTH);
+        
+        // Panel zdarzeń
+        JPanel eventsPanel = new JPanel(new BorderLayout(10, 10));
+        eventsPanel.setBorder(BorderFactory.createTitledBorder("Przypisz do zdarzeń"));
+        
+        DefaultListModel<String> eventsModel = new DefaultListModel<>();
+        JList<String> eventsList = new JList<>(eventsModel);
+        eventsList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        
+        // Wypełnij listę zdarzeniami
+        for (Zdarzenie z : appMemory.zdarzenia) {
+            eventsModel.addElement(z.getTytul() + " (" + z.getData() + ")");
+        }
+        
+        JScrollPane eventsScroll = new JScrollPane(eventsList);
+        eventsPanel.add(new JLabel("Zaznacz zdarzenia (można wybrać wiele):"), BorderLayout.NORTH);
+        eventsPanel.add(eventsScroll, BorderLayout.CENTER);
+        
+        mainPanel.add(eventsPanel, BorderLayout.CENTER);
+        
+        // Przyciski
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         JButton okBtn = new JButton("OK");
         JButton cancelBtn = new JButton("Anuluj");
         
@@ -706,7 +845,24 @@ public class CalendarGUI extends JFrame {
                     com.google.i18n.phonenumbers.PhoneNumberUtil.getInstance().parse(telField.getText(), "PL"),
                     new jakarta.mail.internet.InternetAddress(emailField.getText())
                 );
+                
+                // Dodaj kontakt do wybranych zdarzeń
+                int[] selectedIndices = eventsList.getSelectedIndices();
+                for (int idx : selectedIndices) {
+                    Zdarzenie z = appMemory.zdarzenia.get(idx);
+                    if (z.getKontakty() == null) {
+                        z.setKontakty(new java.util.ArrayList<>());
+                    }
+                    z.getKontakty().add(k);
+                    
+                    if (k.getZdarzenia() == null) {
+                        k.setZdarzenia(new java.util.ArrayList<>());
+                    }
+                    k.getZdarzenia().add(z);
+                }
+                
                 appMemory.kontakty.add(k);
+                markChanged();
                 refreshData();
                 dialog.dispose();
                 JOptionPane.showMessageDialog(this, "Kontakt dodany pomyślnie!");
@@ -717,10 +873,12 @@ public class CalendarGUI extends JFrame {
         
         cancelBtn.addActionListener(onAction(dialog::dispose));
         
-        panel.add(okBtn);
-        panel.add(cancelBtn);
+        buttonPanel.add(okBtn);
+        buttonPanel.add(cancelBtn);
         
-        dialog.getContentPane().add(panel);
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        dialog.getContentPane().add(mainPanel);
         dialog.setVisible(true);
     }
     
@@ -733,26 +891,71 @@ public class CalendarGUI extends JFrame {
         
         Kontakt k = appMemory.kontakty.get(row);
         JDialog dialog = new JDialog((java.awt.Frame) null, "Edytuj Kontakt", true);
-        dialog.setSize(400, 300);
+        dialog.setSize(600, 500);
         dialog.setLocationRelativeTo(this);
         
-        JPanel panel = new JPanel(new GridLayout(5, 2, 10, 10));
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        
+        // Panel z podstawowymi danymi
+        JPanel dataPanel = new JPanel(new GridLayout(4, 2, 10, 10));
+        dataPanel.setBorder(BorderFactory.createTitledBorder("Dane kontaktu"));
         
         JTextField imieField = new JTextField(k.getImie());
         JTextField nazwiskoField = new JTextField(k.getNazwisko());
         JTextField telField = new JTextField(k.getTelStr());
         JTextField emailField = new JTextField(k.getEmailStr());
         
-        panel.add(new JLabel("Imię:"));
-        panel.add(imieField);
-        panel.add(new JLabel("Nazwisko:"));
-        panel.add(nazwiskoField);
-        panel.add(new JLabel("Telefon:"));
-        panel.add(telField);
-        panel.add(new JLabel("Email:"));
-        panel.add(emailField);
+        dataPanel.add(new JLabel("Imię:"));
+        dataPanel.add(imieField);
+        dataPanel.add(new JLabel("Nazwisko:"));
+        dataPanel.add(nazwiskoField);
+        dataPanel.add(new JLabel("Telefon:"));
+        dataPanel.add(telField);
+        dataPanel.add(new JLabel("Email:"));
+        dataPanel.add(emailField);
         
+        mainPanel.add(dataPanel, BorderLayout.NORTH);
+        
+        // Panel zdarzeń
+        JPanel eventsPanel = new JPanel(new BorderLayout(10, 10));
+        eventsPanel.setBorder(BorderFactory.createTitledBorder("Przypisane zdarzenia"));
+        
+        DefaultListModel<String> eventsModel = new DefaultListModel<>();
+        JList<String> eventsList = new JList<>(eventsModel);
+        eventsList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        
+        // Zaznacz aktualnie przypisane zdarzenia - porównuj po tytule i dacie
+        java.util.List<Integer> selectedIndices = new java.util.ArrayList<>();
+        for (int i = 0; i < appMemory.zdarzenia.size(); i++) {
+            Zdarzenie z = appMemory.zdarzenia.get(i);
+            eventsModel.addElement(z.getTytul() + " (" + z.getData() + ")");
+            
+            // Sprawdź czy to zdarzenie jest przypisane do kontaktu
+            if (k.getZdarzenia() != null) {
+                for (Zdarzenie kz : k.getZdarzenia()) {
+                    if (kz.getTytul().equals(z.getTytul()) && 
+                        kz.getData().equals(z.getData())) {
+                        selectedIndices.add(i);
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Ustaw zaznaczenia
+        int[] indices = selectedIndices.stream().mapToInt(Integer::intValue).toArray();
+        eventsList.setSelectedIndices(indices);
+        eventsList.ensureIndexIsVisible(0); // Wymuszenie odświeżenia UI
+        
+        JScrollPane eventsScroll = new JScrollPane(eventsList);
+        eventsPanel.add(new JLabel("Zaznacz zdarzenia (można wybrać wiele):"), BorderLayout.NORTH);
+        eventsPanel.add(eventsScroll, BorderLayout.CENTER);
+        
+        mainPanel.add(eventsPanel, BorderLayout.CENTER);
+        
+        // Przyciski
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         JButton okBtn = new JButton("OK");
         JButton cancelBtn = new JButton("Anuluj");
         
@@ -761,6 +964,32 @@ public class CalendarGUI extends JFrame {
             k.setNazwisko(nazwiskoField.getText());
             k.setTelStr(telField.getText());
             k.setEmailStr(emailField.getText());
+            
+            // Usuń kontakt ze wszystkich zdarzeń
+            for (Zdarzenie z : appMemory.zdarzenia) {
+                if (z.getKontakty() != null) {
+                    z.getKontakty().remove(k);
+                }
+            }
+            
+            // Wyczyść listę zdarzeń w kontakcie
+            if (k.getZdarzenia() == null) {
+                k.setZdarzenia(new java.util.ArrayList<>());
+            }
+            k.getZdarzenia().clear();
+            
+            // Dodaj do wybranych zdarzeń
+            int[] selectedIdx = eventsList.getSelectedIndices();
+            for (int idx : selectedIdx) {
+                Zdarzenie z = appMemory.zdarzenia.get(idx);
+                if (z.getKontakty() == null) {
+                    z.setKontakty(new java.util.ArrayList<>());
+                }
+                z.getKontakty().add(k);
+                k.getZdarzenia().add(z);
+            }
+            
+            markChanged();
             refreshData();
             dialog.dispose();
             JOptionPane.showMessageDialog(this, "Kontakt zaktualizowany!");
@@ -768,10 +997,12 @@ public class CalendarGUI extends JFrame {
         
         cancelBtn.addActionListener(onAction(dialog::dispose));
         
-        panel.add(okBtn);
-        panel.add(cancelBtn);
+        buttonPanel.add(okBtn);
+        buttonPanel.add(cancelBtn);
         
-        dialog.getContentPane().add(panel);
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        dialog.getContentPane().add(mainPanel);
         dialog.setVisible(true);
     }
     
@@ -785,6 +1016,7 @@ public class CalendarGUI extends JFrame {
         int confirm = JOptionPane.showConfirmDialog(this, "Potwierdzasz usunięcie?", "Potwierdzenie", JOptionPane.YES_NO_OPTION);
         if (confirm == JOptionPane.YES_OPTION) {
             appMemory.kontakty.remove(row);
+            markChanged();
             refreshData();
             JOptionPane.showMessageDialog(this, "Kontakt usunięty!");
         }
@@ -843,15 +1075,23 @@ public class CalendarGUI extends JFrame {
         java.util.List<Kontakt> tempParticipants = new java.util.ArrayList<>();
         
         addParticipantBtn.addActionListener(onAction(() -> {
-            String[] contactNames = new String[appMemory.kontakty.size()];
-            for (int i = 0; i < appMemory.kontakty.size(); i++) {
-                Kontakt k = appMemory.kontakty.get(i);
-                contactNames[i] = k.getNazwisko() + " " + k.getImie();
+            // Filtruj kontakty - pokaż tylko te, którzy jeszcze nie są uczestnikami
+            java.util.List<Kontakt> availableContacts = new java.util.ArrayList<>();
+            for (Kontakt k : appMemory.kontakty) {
+                if (!tempParticipants.contains(k)) {
+                    availableContacts.add(k);
+                }
             }
             
-            if (contactNames.length == 0) {
-                JOptionPane.showMessageDialog(null, "Brak kontaktów w bazie danych!", "Info", JOptionPane.INFORMATION_MESSAGE);
+            if (availableContacts.isEmpty()) {
+                JOptionPane.showMessageDialog(null, "Wszystkie kontakty zostały już dodane!", "Info", JOptionPane.INFORMATION_MESSAGE);
                 return;
+            }
+            
+            String[] contactNames = new String[availableContacts.size()];
+            for (int i = 0; i < availableContacts.size(); i++) {
+                Kontakt k = availableContacts.get(i);
+                contactNames[i] = k.getNazwisko() + " " + k.getImie();
             }
             
             String selected = (String) JOptionPane.showInputDialog(
@@ -865,8 +1105,8 @@ public class CalendarGUI extends JFrame {
             );
             
             if (selected != null) {
-                for (Kontakt k : appMemory.kontakty) {
-                    if ((k.getNazwisko() + " " + k.getImie()).equals(selected) && !tempParticipants.contains(k)) {
+                for (Kontakt k : availableContacts) {
+                    if ((k.getNazwisko() + " " + k.getImie()).equals(selected)) {
                         tempParticipants.add(k);
                         participantsModel.addElement(selected);
                         break;
@@ -910,6 +1150,7 @@ public class CalendarGUI extends JFrame {
                     z.dodajKontakt(k);
                 }
                 appMemory.zdarzenia.add(z);
+                markChanged();
                 refreshData();
                 dialog.dispose();
                 JOptionPane.showMessageDialog(null, "Zdarzenie dodane pomyślnie!");
@@ -989,15 +1230,23 @@ public class CalendarGUI extends JFrame {
         JButton removeParticipantBtn = new JButton("Usuń uczestnika");
         
         addParticipantBtn.addActionListener(onAction(() -> {
-            String[] contactNames = new String[appMemory.kontakty.size()];
-            for (int i = 0; i < appMemory.kontakty.size(); i++) {
-                Kontakt k = appMemory.kontakty.get(i);
-                contactNames[i] = k.getNazwisko() + " " + k.getImie();
+            // Filtruj kontakty - pokaż tylko te, którzy jeszcze nie są uczestnikami
+            java.util.List<Kontakt> availableContacts = new java.util.ArrayList<>();
+            for (Kontakt k : appMemory.kontakty) {
+                if (z.getKontakty() == null || !z.getKontakty().contains(k)) {
+                    availableContacts.add(k);
+                }
             }
             
-            if (contactNames.length == 0) {
-                JOptionPane.showMessageDialog(null, "Brak kontaktów w bazie danych!", "Info", JOptionPane.INFORMATION_MESSAGE);
+            if (availableContacts.isEmpty()) {
+                JOptionPane.showMessageDialog(null, "Wszystkie kontakty są już uczestnikami tego zdarzenia!", "Info", JOptionPane.INFORMATION_MESSAGE);
                 return;
+            }
+            
+            String[] contactNames = new String[availableContacts.size()];
+            for (int i = 0; i < availableContacts.size(); i++) {
+                Kontakt k = availableContacts.get(i);
+                contactNames[i] = k.getNazwisko() + " " + k.getImie();
             }
             
             String selected = (String) JOptionPane.showInputDialog(
@@ -1011,7 +1260,7 @@ public class CalendarGUI extends JFrame {
             );
             
             if (selected != null) {
-                for (Kontakt k : appMemory.kontakty) {
+                for (Kontakt k : availableContacts) {
                     if ((k.getNazwisko() + " " + k.getImie()).equals(selected)) {
                         z.dodajKontakt(k);
                         participantsModel.clear();
@@ -1054,6 +1303,7 @@ public class CalendarGUI extends JFrame {
                 if (pickedDate == null) pickedDate = LocalDate.now();
                 z.setData(pickedDate);
                 z.setMiejsce(java.net.URI.create(linkField.getText()).toURL());
+                markChanged();
                 refreshData();
                 dialog.dispose();
                 JOptionPane.showMessageDialog(null, "Zdarzenie zaktualizowane!");
@@ -1082,23 +1332,40 @@ public class CalendarGUI extends JFrame {
         int confirm = JOptionPane.showConfirmDialog(this, "Potwierdzasz usunięcie?", "Potwierdzenie", JOptionPane.YES_NO_OPTION);
         if (confirm == JOptionPane.YES_OPTION) {
             appMemory.zdarzenia.remove(row);
+            markChanged();
             refreshData();
             JOptionPane.showMessageDialog(this, "Zdarzenie usunięte!");
         }
     }
     
     private void saveData() {
-        // Pokazuj pasek postępu podczas zapisu (bez blokowania EDT)
-        JDialog dlg = new JDialog(this, "Zapisywanie...", false);
-        JProgressBar pb = new JProgressBar();
-        pb.setIndeterminate(true);
-        dlg.getContentPane().add(pb);
-        dlg.setSize(300, 80);
-        dlg.setLocationRelativeTo(this);
-        dlg.setVisible(true);
-        dbManager.saveToDatabase(appMemory);
-        dlg.dispose();
-        JOptionPane.showMessageDialog(this, "Dane zapisane do bazy danych!", "Sukces", JOptionPane.INFORMATION_MESSAGE);
+        try {
+            // Pokazuj pasek postępu podczas zapisu
+            JDialog dlg = new JDialog(this, "Zapisywanie...", true); // modal = true
+            JProgressBar pb = new JProgressBar();
+            pb.setIndeterminate(true);
+            dlg.getContentPane().add(pb);
+            dlg.setSize(300, 80);
+            dlg.setLocationRelativeTo(this);
+            
+            // Zapis w wątku aby nie zablokować EDT
+            Thread saveThread = new Thread(() -> {
+                System.out.println("[GUI] Rozpoczynam zapis do bazy danych...");
+                dbManager.saveToDatabase(appMemory);
+                System.out.println("[GUI] Zapis do bazy danych zakończony!");
+                dlg.dispose();
+            });
+            saveThread.start();
+            dlg.setVisible(true);
+            
+            // Czekaj aż wątek się skończy
+            saveThread.join();
+            
+            JOptionPane.showMessageDialog(this, "Dane zapisane do bazy danych!", "Sukces", JOptionPane.INFORMATION_MESSAGE);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Błąd zapisu: " + ex.getMessage(), "Błąd", JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
+        }
     }
     
     private void clearRAM() {
@@ -1106,6 +1373,7 @@ public class CalendarGUI extends JFrame {
         if (confirm == JOptionPane.YES_OPTION) {
             appMemory.kontakty.clear();
             appMemory.zdarzenia.clear();
+            markChanged();
             refreshData();
             JOptionPane.showMessageDialog(this, "RAM wyczyszczony!");
         }
@@ -1166,7 +1434,7 @@ public class CalendarGUI extends JFrame {
         else {
             for (Kontakt k : appMemory.kontakty) {
                 sb.append(k.getNazwisko()).append(" ").append(k.getImie()).append("\n");
-                List<Zdarzenie> zd = k.getZdarzenia();
+                java.util.List<Zdarzenie> zd = k.getZdarzenia();
                 if (zd == null || zd.isEmpty()) sb.append("   — brak zdarzeń\n");
                 else {
                     for (Zdarzenie z : zd) {
@@ -1184,7 +1452,7 @@ public class CalendarGUI extends JFrame {
         else {
             for (Zdarzenie z : appMemory.zdarzenia) {
                 sb.append("[").append(z.getData()).append("] ").append(z.getTytul()).append("\n");
-                List<Kontakt> uczestnicy = z.getKontakty();
+                java.util.List<Kontakt> uczestnicy = z.getKontakty();
                 if (uczestnicy == null || uczestnicy.isEmpty()) sb.append("   — brak uczestników\n");
                 else {
                     for (Kontakt k : uczestnicy) {
@@ -1216,7 +1484,7 @@ public class CalendarGUI extends JFrame {
         allEventsList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
         DefaultListModel<String> kontaktEventsModel = new DefaultListModel<>();
-        List<Zdarzenie> zd = k.getZdarzenia();
+        java.util.List<Zdarzenie> zd = k.getZdarzenia();
         if (zd != null) {
             for (Zdarzenie z : zd) {
                 kontaktEventsModel.addElement(z.getData() + " | " + z.getTytul());
@@ -1286,7 +1554,7 @@ public class CalendarGUI extends JFrame {
         allKontaktyList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
         DefaultListModel<String> uczestnicyModel = new DefaultListModel<>();
-        List<Kontakt> uc = z.getKontakty();
+        java.util.List<Kontakt> uc = z.getKontakty();
         if (uc != null) {
             for (Kontakt k : uc) {
                 uczestnicyModel.addElement(k.getNazwisko() + " " + k.getImie());
@@ -1382,77 +1650,88 @@ public class CalendarGUI extends JFrame {
         }
     }
 
-    // Mini okno: prezentacja szczegółów dla kliknięć w listach
+    // Wyświetlanie szczegółów kontaktu w podzielonych panelach
     private void showKontaktDetailsInPanel(Kontakt k) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("╔═══════════════════════════════════╗\n");
-        sb.append("║      SZCZEGÓŁY KONTAKTU           ║\n");
-        sb.append("╚═══════════════════════════════════╝\n\n");
-        sb.append("Imię:      ").append(k.getImie()).append("\n");
-        sb.append("Nazwisko:  ").append(k.getNazwisko()).append("\n");
-        if (k.getTelStr() != null && !k.getTelStr().isBlank()) 
-            sb.append("Telefon:   ").append(k.getTelStr()).append("\n");
-        if (k.getEmailStr() != null && !k.getEmailStr().isBlank()) 
-            sb.append("Email:     ").append(k.getEmailStr()).append("\n");
+        // Panel szczegółów kontaktu (góra)
+        StringBuilder details = new StringBuilder();
+        details.append("SZCZEGÓŁY KONTAKTU\n\n");
+        details.append("Imię: ").append(k.getImie()).append("\n");
+        details.append("Nazwisko: ").append(k.getNazwisko()).append("\n");
+        if (k.getTelStr() != null && !k.getTelStr().isBlank())
+            details.append("Telefon: ").append(k.getTelStr()).append("\n");
+        if (k.getEmailStr() != null && !k.getEmailStr().isBlank())
+            details.append("Email: ").append(k.getEmailStr()).append("\n");
         
+        if (kontaktyDetailsArea != null) {
+            kontaktyDetailsArea.setText(details.toString());
+            kontaktyDetailsArea.setCaretPosition(0);
+        }
+        
+        // Panel przypisanych zdarzeń (dół)
         java.util.List<Zdarzenie> events = k.getZdarzenia();
-        sb.append("\n╔══════════════════════════════════╗\n");
-        sb.append("║  ZDARZENIA (").append(String.format("%2d", events != null ? events.size() : 0)).append(")                ║\n");
-        sb.append("╚══════════════════════════════════╝\n");
+        StringBuilder eventsText = new StringBuilder();
+        eventsText.append("PRZYPISANE ZDARZENIA (").append(events != null ? events.size() : 0).append(")\n\n");
         
         if (events == null || events.isEmpty()) {
-            sb.append("\n  ► Brak przypisanych zdarzeń\n");
+            eventsText.append("Brak przypisanych zdarzeń");
         } else {
             for (int i = 0; i < events.size(); i++) {
                 Zdarzenie z = events.get(i);
-                sb.append(String.format("\n  ► [%d] %s\n", i + 1, 
-                    (z.getTytul() != null ? z.getTytul() : "(bez tytułu)")));
-                sb.append("      Data: ").append(z.getData()).append("\n");
+                eventsText.append(i + 1).append(". ").append(z.getTytul() != null ? z.getTytul() : "(bez tytułu)").append("\n");
+                eventsText.append("   Data: ").append(z.getData()).append("\n");
                 if (z.getOpis() != null && !z.getOpis().isBlank())
-                    sb.append("      Opis: ").append(z.getOpis()).append("\n");
+                    eventsText.append("   Opis: ").append(z.getOpis()).append("\n");
+                if (i < events.size() - 1)
+                    eventsText.append("\n");
             }
         }
         
-        if (kontaktyDetailsArea != null) {
-            kontaktyDetailsArea.setText(sb.toString());
-            kontaktyDetailsArea.setCaretPosition(0);
+        if (kontaktyEventsArea != null) {
+            kontaktyEventsArea.setText(eventsText.toString());
+            kontaktyEventsArea.setCaretPosition(0);
         }
     }
 
     private void showZdarzenieDetailsInPanel(Zdarzenie z) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("╔═══════════════════════════════════╗\n");
-        sb.append("║      SZCZEGÓŁY ZDARZENIA          ║\n");
-        sb.append("╚═══════════════════════════════════╝\n\n");
-        sb.append("Tytuł:     ").append(z.getTytul() != null ? z.getTytul() : "(bez tytułu)").append("\n");
-        if (z.getData() != null) 
-            sb.append("Data:      ").append(z.getData()).append("\n");
-        if (z.getOpis() != null && !z.getOpis().isBlank()) 
-            sb.append("Opis:      ").append(z.getOpis()).append("\n");
-        if (z.getMiejsce() != null) 
-            sb.append("Link:      ").append(z.getMiejsce()).append("\n");
+        // Panel szczegółów zdarzenia (góra)
+        StringBuilder details = new StringBuilder();
+        details.append("SZCZEGÓŁY ZDARZENIA\n\n");
+        details.append("Tytuł: ").append(z.getTytul() != null ? z.getTytul() : "(bez tytułu)").append("\n");
+        if (z.getData() != null)
+            details.append("Data: ").append(z.getData()).append("\n");
+        if (z.getOpis() != null && !z.getOpis().isBlank())
+            details.append("Opis: ").append(z.getOpis()).append("\n");
+        if (z.getMiejsce() != null)
+            details.append("Link: ").append(z.getMiejsce()).append("\n");
         
+        if (zdarzeniaDetailsArea != null) {
+            zdarzeniaDetailsArea.setText(details.toString());
+            zdarzeniaDetailsArea.setCaretPosition(0);
+        }
+        
+        // Panel uczestników (dół)
         java.util.List<Kontakt> kontakty = z.getKontakty();
-        sb.append("\n╔══════════════════════════════════╗\n");
-        sb.append("║  UCZESTNICY (").append(String.format("%2d", kontakty != null ? kontakty.size() : 0)).append(")           ║\n");
-        sb.append("╚══════════════════════════════════╝\n");
+        StringBuilder participantsText = new StringBuilder();
+        participantsText.append("UCZESTNICY (").append(kontakty != null ? kontakty.size() : 0).append(")\n\n");
         
         if (kontakty == null || kontakty.isEmpty()) {
-            sb.append("\n  ► Brak przypisanych uczestników\n");
+            participantsText.append("Brak przypisanych uczestników");
         } else {
             for (int i = 0; i < kontakty.size(); i++) {
                 Kontakt k = kontakty.get(i);
-                sb.append(String.format("\n  ► [%d] %s %s\n", i + 1, k.getNazwisko(), k.getImie()));
+                participantsText.append(i + 1).append(". ").append(k.getNazwisko()).append(" ").append(k.getImie()).append("\n");
                 if (k.getTelStr() != null && !k.getTelStr().isBlank())
-                    sb.append("      Tel:   ").append(k.getTelStr()).append("\n");
+                    participantsText.append("   Tel: ").append(k.getTelStr()).append("\n");
                 if (k.getEmailStr() != null && !k.getEmailStr().isBlank())
-                    sb.append("      Email: ").append(k.getEmailStr()).append("\n");
+                    participantsText.append("   Email: ").append(k.getEmailStr()).append("\n");
+                if (i < kontakty.size() - 1)
+                    participantsText.append("\n");
             }
         }
         
-        if (zdarzeniaDetailsArea != null) {
-            zdarzeniaDetailsArea.setText(sb.toString());
-            zdarzeniaDetailsArea.setCaretPosition(0);
+        if (zdarzeniaParticipantsArea != null) {
+            zdarzeniaParticipantsArea.setText(participantsText.toString());
+            zdarzeniaParticipantsArea.setCaretPosition(0);
         }
     }
 }

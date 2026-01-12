@@ -33,7 +33,9 @@ public class DBManager {
      */
     private void connect() throws SQLException {
         connection = DriverManager.getConnection(DB_URL);
+        connection.setAutoCommit(false); // Wyłącz autocommit dla transakcji
         createTablesIfNotExist();
+        connection.commit(); // Commit po utworzeniu tabel
     }
     
     /**
@@ -119,6 +121,9 @@ public class DBManager {
             // Na końcu wczytaj relacje (kto w jakim zdarzeniu uczestniczy)
             loadRelacje(kontaktyMap, zdarzeniaMap);
             
+            // Commit po odczytaniu (dla pewności, choć SELECT nie wymaga)
+            connection.commit();
+            
             System.out.println("[DB] Wczytano: " + memory.kontakty.size() + " kontaktów, " + 
                              memory.zdarzenia.size() + " zdarzeń.");
             
@@ -127,6 +132,7 @@ public class DBManager {
             
         } catch (SQLException e) {
             System.err.println("[DB ERROR] Błąd wczytywania: " + e.getMessage());
+            e.printStackTrace();
         }
         
         return memory;
@@ -137,9 +143,11 @@ public class DBManager {
      */
     private Map<Long, Kontakt> loadKontakty() throws SQLException {
         Map<Long, Kontakt> map = new HashMap<>();
+        System.out.println("[DB] Wczytywanie kontaktów...");
         Statement stmt = connection.createStatement();
         ResultSet rs = stmt.executeQuery("SELECT * FROM kontakty");
         
+        int count = 0;
         while (rs.next()) {
             Kontakt k = new Kontakt();
             k.setId(rs.getLong("id"));
@@ -149,8 +157,11 @@ public class DBManager {
             k.setEmailStr(rs.getString("email"));
             
             map.put(k.getId(), k);
+            count++;
+            System.out.println("[DB]   ID=" + k.getId() + ": " + k.getNazwisko() + " " + k.getImie());
         }
         
+        System.out.println("[DB] Wczytano " + count + " kontaktów.");
         rs.close();
         stmt.close();
         return map;
@@ -161,9 +172,11 @@ public class DBManager {
      */
     private Map<Long, Zdarzenie> loadZdarzenia() throws SQLException {
         Map<Long, Zdarzenie> map = new HashMap<>();
+        System.out.println("[DB] Wczytywanie zdarzeń...");
         Statement stmt = connection.createStatement();
         ResultSet rs = stmt.executeQuery("SELECT * FROM zdarzenia");
         
+        int count = 0;
         while (rs.next()) {
             Zdarzenie z = new Zdarzenie();
             z.setId(rs.getLong("id"));
@@ -181,8 +194,11 @@ public class DBManager {
             }
             
             map.put(z.getId(), z);
+            count++;
+            System.out.println("[DB]   ID=" + z.getId() + ": " + z.getTytul() + " (" + z.getData() + ")");
         }
         
+        System.out.println("[DB] Wczytano " + count + " zdarzeń.");
         rs.close();
         stmt.close();
         return map;
@@ -192,9 +208,11 @@ public class DBManager {
      * Wczytuje relacje z tabeli asocjacyjnej i uzupełnia listy w obiektach
      */
     private void loadRelacje(Map<Long, Kontakt> kontakty, Map<Long, Zdarzenie> zdarzenia) throws SQLException {
+        System.out.println("[DB] Wczytywanie relacji kontakty_zdarzenia...");
         Statement stmt = connection.createStatement();
         ResultSet rs = stmt.executeQuery("SELECT * FROM kontakty_zdarzenia");
         
+        int count = 0;
         while (rs.next()) {
             Long kontaktId = rs.getLong("kontakt_id");
             Long zdarzenieId = rs.getLong("zdarzenie_id");
@@ -205,9 +223,14 @@ public class DBManager {
             if (k != null && z != null) {
                 k.dodajZdarzenie(z);
                 z.dodajKontakt(k);
+                count++;
+                System.out.println("[DB]   Relacja: kontakt_id=" + kontaktId + " <-> zdarzenie_id=" + zdarzenieId);
+            } else {
+                System.err.println("[DB WARN] Nie znaleziono kontaktu=" + kontaktId + " lub zdarzenia=" + zdarzenieId);
             }
         }
         
+        System.out.println("[DB] Wczytano " + count + " relacji.");
         rs.close();
         stmt.close();
     }
@@ -216,44 +239,56 @@ public class DBManager {
     
     /**
      * Zapisuje wszystkie dane z pamięci RAM do bazy
-     * Otwiera połączenie -> czyści tabele -> zapisuje -> zamyka połączenie
+     * Otwiera połączenie -> UPDATE istniejące -> INSERT nowe -> zamyka połączenie
      */
     public void saveToDatabase(Main.MemoryContainer memory) {
         try {
             System.out.println("[DB] Otwieranie połączenia z bazą danych...");
             connect();
             
-            // Wyczyść istniejące dane
-            clearAllData();
-            
-            // Zapisz kontakty
-            Map<Kontakt, Long> kontaktyIdMap = saveKontakty(memory.kontakty);
-            
-            // Zapisz zdarzenia
-            Map<Zdarzenie, Long> zdarzeniaIdMap = saveZdarzenia(memory.zdarzenia);
-            
-            // Zapisz relacje
-            saveRelacje(memory.kontakty, memory.zdarzenia, kontaktyIdMap, zdarzeniaIdMap);
-            
-            System.out.println("[DB] Zapisano: " + memory.kontakty.size() + " kontaktów, " + 
-                             memory.zdarzenia.size() + " zdarzeń.");
+            try {
+                // Wyczyść tylko relacje (nie kontakty/zdarzenia - będą UPDATE'owane)
+                clearRelations();
+                
+                // Zapisz kontakty
+                Map<Kontakt, Long> kontaktyIdMap = saveKontakty(memory.kontakty);
+                
+                // Zapisz zdarzenia
+                Map<Zdarzenie, Long> zdarzeniaIdMap = saveZdarzenia(memory.zdarzenia);
+                
+                // Zapisz relacje
+                saveRelacje(memory.kontakty, memory.zdarzenia, kontaktyIdMap, zdarzeniaIdMap);
+                
+                // COMMIT - zapisz zmiany do pliku bazy danych
+                connection.commit();
+                
+                System.out.println("[DB] Zapisano: " + memory.kontakty.size() + " kontaktów, " + 
+                                 memory.zdarzenia.size() + " zdarzeń.");
+                
+            } catch (SQLException e) {
+                System.err.println("[DB ERROR] Błąd podczas zapisywania: " + e.getMessage());
+                connection.rollback(); // Wycofaj wszystkie zmiany w transakcji
+                throw e; // Przerzuć wyjątek wyżej
+            }
             
             disconnect();
             System.out.println("[DB] Połączenie zamknięte.");
             
         } catch (SQLException e) {
-            System.err.println("[DB ERROR] Błąd zapisywania: " + e.getMessage());
+            System.err.println("[DB ERROR] Błąd zapisu do bazy danych: " + e.getMessage());
+            e.printStackTrace();
         }
     }
     
     /**
-     * Czyści wszystkie dane z tabel (przed pełnym zapisem)
+     * Czyści tylko relacje (przed zapisem nowych)
+     * Kontakty i zdarzenia będą UPDATE'owane/INSERT'owane
      */
-    private void clearAllData() throws SQLException {
+    private void clearRelations() throws SQLException {
+        System.out.println("[DB] Czyszczenie relacji kontakty_zdarzenia...");
         Statement stmt = connection.createStatement();
         stmt.execute("DELETE FROM kontakty_zdarzenia");
-        stmt.execute("DELETE FROM kontakty");
-        stmt.execute("DELETE FROM zdarzenia");
+        System.out.println("[DB]   Usunięto relacje kontakty_zdarzenia");
         stmt.close();
     }
     
@@ -262,6 +297,12 @@ public class DBManager {
      */
     private Map<Kontakt, Long> saveKontakty(List<Kontakt> kontakty) throws SQLException {
         Map<Kontakt, Long> idMap = new HashMap<>();
+        System.out.println("[DB] Zapisywanie " + kontakty.size() + " kontaktów...");
+        
+        // Debugowanie - sprawdz czy obiekty mają ID
+        for (Kontakt k : kontakty) {
+            System.out.println("[DB DEBUG] Kontakt " + k.getNazwisko() + ": ID=" + k.getId());
+        }
         
         for (Kontakt k : kontakty) {
             if (k.getId() != null && k.getId() > 0) {
@@ -273,7 +314,8 @@ public class DBManager {
                 pstmt.setString(3, k.getTelStr());
                 pstmt.setString(4, k.getEmailStr());
                 pstmt.setLong(5, k.getId());
-                pstmt.executeUpdate();
+                int updated = pstmt.executeUpdate();
+                System.out.println("[DB]   UPDATE ID=" + k.getId() + ": " + k.getNazwisko() + " (" + updated + " wiersz)");
                 pstmt.close();
                 idMap.put(k, k.getId());
             } else {
@@ -291,12 +333,15 @@ public class DBManager {
                     Long newId = rs.getLong(1);
                     k.setId(newId);
                     idMap.put(k, newId);
+                    System.out.println("[DB]   INSERT: " + k.getNazwisko() + " -> ID=" + newId);
+                } else {
+                    System.err.println("[DB ERROR] Nie udało się pobrać ID dla kontaktu: " + k.getNazwisko());
                 }
                 rs.close();
                 pstmt.close();
             }
         }
-        
+        System.out.println("[DB] Zapisano " + idMap.size() + " kontaktów.");
         return idMap;
     }
     
@@ -305,6 +350,12 @@ public class DBManager {
      */
     private Map<Zdarzenie, Long> saveZdarzenia(List<Zdarzenie> zdarzenia) throws SQLException {
         Map<Zdarzenie, Long> idMap = new HashMap<>();
+        System.out.println("[DB] Zapisywanie " + zdarzenia.size() + " zdarzeń...");
+        
+        // Debugowanie - sprawdz czy obiekty mają ID
+        for (Zdarzenie z : zdarzenia) {
+            System.out.println("[DB DEBUG] Zdarzenie " + z.getTytul() + ": ID=" + z.getId());
+        }
         
         for (Zdarzenie z : zdarzenia) {
             if (z.getId() != null && z.getId() > 0) {
@@ -316,7 +367,8 @@ public class DBManager {
                 pstmt.setString(3, z.getData().toString());
                 pstmt.setString(4, z.getMiejsce() != null ? z.getMiejsce().toString() : null);
                 pstmt.setLong(5, z.getId());
-                pstmt.executeUpdate();
+                int updated = pstmt.executeUpdate();
+                System.out.println("[DB]   UPDATE ID=" + z.getId() + ": " + z.getTytul() + " (" + updated + " wiersz)");
                 pstmt.close();
                 idMap.put(z, z.getId());
             } else {
@@ -334,55 +386,55 @@ public class DBManager {
                     Long newId = rs.getLong(1);
                     z.setId(newId);
                     idMap.put(z, newId);
+                    System.out.println("[DB]   INSERT: " + z.getTytul() + " (" + z.getData() + ") -> ID=" + newId);
+                } else {
+                    System.err.println("[DB ERROR] Nie udało się pobrać ID dla zdarzenia: " + z.getTytul());
                 }
                 rs.close();
                 pstmt.close();
             }
         }
-        
+        System.out.println("[DB] Zapisano " + idMap.size() + " zdarzeń.");
         return idMap;
     }
     
     /**
-     * Zapisuje relacje do tabeli asocjacyjnej - najpierw czyści stare, potem dodaje nowe
+     * Zapisuje relacje do tabeli asocjacyjnej - zapisuje wszystkie relacje z pamięci
+     * Tabela kontakty_zdarzenia została już wyczyszczona w clearAllData()
      */
     private void saveRelacje(List<Kontakt> kontakty, List<Zdarzenie> zdarzenia,
                             Map<Kontakt, Long> kontaktyIdMap, Map<Zdarzenie, Long> zdarzeniaIdMap) throws SQLException {
-        // Najpierw wyczyść stare relacje (ale NIE całą tabelę, bo mogą być inne rekordy)
-        // Usuwamy tylko relacje dla zdarzeń które mamy w pamięci
-        Statement stmt = connection.createStatement();
-        StringBuilder deleteIds = new StringBuilder();
-        for (Zdarzenie z : zdarzenia) {
-            Long zId = zdarzeniaIdMap.get(z);
-            if (zId != null) {
-                if (deleteIds.length() > 0) deleteIds.append(",");
-                deleteIds.append(zId);
-            }
-        }
-        if (deleteIds.length() > 0) {
-            stmt.execute("DELETE FROM kontakty_zdarzenia WHERE zdarzenie_id IN (" + deleteIds + ")");
-        }
-        stmt.close();
-        
-        // Teraz dodaj nowe relacje
         String sql = "INSERT INTO kontakty_zdarzenia (kontakt_id, zdarzenie_id) VALUES (?, ?)";
         PreparedStatement pstmt = connection.prepareStatement(sql);
         
-        // Przechodząc przez kontakty, zapisz ich relacje do zdarzeń
-        for (Kontakt k : kontakty) {
-            Long kontaktId = kontaktyIdMap.get(k);
-            if (kontaktId == null) continue;
+        int relacjeCount = 0;
+        System.out.println("[DB] Zapisywanie relacji kontakty_zdarzenia...");
+        
+        // Przechodź przez zdarzenia i zapisz wszystkich uczestników
+        for (Zdarzenie z : zdarzenia) {
+            Long zdarzenieId = zdarzeniaIdMap.get(z);
+            if (zdarzenieId == null || z.getKontakty() == null) continue;
             
-            for (Zdarzenie z : k.getZdarzenia()) {
-                Long zdarzenieId = zdarzeniaIdMap.get(z);
-                if (zdarzenieId != null) {
-                    pstmt.setLong(1, kontaktId);
-                    pstmt.setLong(2, zdarzenieId);
-                    pstmt.executeUpdate();
+            for (Kontakt k : z.getKontakty()) {
+                Long kontaktId = kontaktyIdMap.get(k);
+                if (kontaktId != null) {
+                    try {
+                        pstmt.setLong(1, kontaktId);
+                        pstmt.setLong(2, zdarzenieId);
+                        pstmt.executeUpdate();
+                        relacjeCount++;
+                        System.out.println("[DB]   Relacja: kontakt_id=" + kontaktId + " <-> zdarzenie_id=" + zdarzenieId);
+                    } catch (SQLException e) {
+                        // Ignoruj duplikaty (jeśli relacja już istnieje)
+                        if (!e.getMessage().contains("UNIQUE constraint")) {
+                            throw e;
+                        }
+                    }
                 }
             }
         }
         
+        System.out.println("[DB] Zapisano " + relacjeCount + " relacji kontakty_zdarzenia.");
         pstmt.close();
     }
 }

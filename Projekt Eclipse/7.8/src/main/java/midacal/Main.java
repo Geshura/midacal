@@ -510,7 +510,7 @@ public class Main {
         } catch (Exception e) { System.out.println("[X] Błąd indeksu."); }
     }
 
-    private static void saveToXml() {
+    public static void saveToXml() {
         if (appMemory.kontakty.isEmpty() && appMemory.zdarzenia.isEmpty()) {
             System.out.println("[!] Brak danych w RAM - zapis przerwany.");
             return;
@@ -525,7 +525,7 @@ public class Main {
         } catch (Exception e) { e.printStackTrace(); }
     }
 
-    private static void loadFromXml() {
+    public static void loadFromXml() {
         File f = new File(FILE_PATH);
         if (!f.exists()) {
             System.out.println("[!] Plik XML nie istnieje - nie można wczytać danych.");
