@@ -42,8 +42,8 @@ import javax.swing.table.DefaultTableModel;
 
 public class CalendarGUI extends JFrame {
     private static final long serialVersionUID = 1L;
-    private Main.MemoryContainer appMemory;
-    private DBManager dbManager;
+    private final Main.MemoryContainer appMemory;
+    private final DBManager dbManager;
     
     // Komponenty
     private JTabbedPane tabbedPane;
@@ -58,20 +58,15 @@ public class CalendarGUI extends JFrame {
     private java.util.Calendar currentMonth;
     private JComboBox<String> monthCombo;
     private JComboBox<Integer> yearCombo;
-    private JSlider calendarFontSlider;
-    private float calendarFontSize = 12f;
     private Color eventDayColor = new Color(0, 102, 0);
     
     private JMenuBar menuBar;
-    private JMenu fileMenu, editMenu, viewMenu, sortMenu;
+    private JMenu fileMenu, editMenu, viewMenu;
     
     private JButton addKontaktBtn, editKontaktBtn, deleteKontaktBtn;
     private JButton addZdarzenieBtn, editZdarzenieBtn, deleteZdarzenieBtn;
-    private JButton refreshBtn, saveBtn;
+    private JButton saveBtn;
     
-    // Dodatkowe panele
-    private JPanel overviewPanel; // JSplitPane: Kontakty | Zdarzenia
-    private JDesktopPane desktopPane; // InternalFrames
     private javax.swing.JTextArea calendarDayDetailsArea; // Panel szczegółów dnia w kalendarzu
     
     public CalendarGUI(Main.MemoryContainer memory, DBManager dbMgr) {
@@ -82,54 +77,6 @@ public class CalendarGUI extends JFrame {
     }
     
     private java.awt.event.ActionListener onAction(Runnable r) { return e -> { if (e != null) r.run(); }; }
-    private javax.swing.event.ChangeListener onChange(Runnable r) { return e -> { if (e != null) r.run(); }; }
-    
-    // Przegląd: SplitPane z dwoma tabelami
-    private JPanel createOverviewPanel() {
-        JPanel panel = new JPanel(new BorderLayout(10, 10));
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        JTable kontaktyView = new JTable(kontaktyModel);
-        JTable zdarzeniaView = new JTable(zdarzeniaModel);
-        JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
-                new JScrollPane(kontaktyView), new JScrollPane(zdarzeniaView));
-        split.setResizeWeight(0.5);
-        panel.add(split, BorderLayout.CENTER);
-        return panel;
-    }
-
-    // Okna: DesktopPane + InternalFrames z tabelami
-    private JPanel createWindowsPanel() {
-        JPanel panel = new JPanel(new BorderLayout(10, 10));
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        desktopPane = new JDesktopPane();
-        panel.add(desktopPane, BorderLayout.CENTER);
-
-        JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JButton openKontakty = new JButton("Nowe okno: Kontakty");
-        JButton openZdarzenia = new JButton("Nowe okno: Zdarzenia");
-        controls.add(openKontakty);
-        controls.add(openZdarzenia);
-        panel.add(controls, BorderLayout.NORTH);
-
-        openKontakty.addActionListener(onAction(() -> {
-            JInternalFrame f = new JInternalFrame("Kontakty", true, true, true, true);
-            f.add(new JScrollPane(new JTable(kontaktyModel)));
-            f.pack();
-            f.setVisible(true);
-            desktopPane.add(f);
-            f.setLocation(10, 10);
-        }));
-        openZdarzenia.addActionListener(onAction(() -> {
-            JInternalFrame f = new JInternalFrame("Zdarzenia", true, true, true, true);
-            f.add(new JScrollPane(new JTable(zdarzeniaModel)));
-            f.pack();
-            f.setVisible(true);
-            desktopPane.add(f);
-            f.setLocation(30, 30);
-        }));
-
-        return panel;
-    }
 
     private void initializeGUI() {
         setTitle("KALENDARZ MIDACAL - Tryb Graficzny");
@@ -152,14 +99,10 @@ public class CalendarGUI extends JFrame {
         JPanel kontaktyPanel = createKontaktyPanel();
         JPanel zdarzeniaPanel = createZdarzeniaPanel();
         JPanel kalendarzPanel = createCalendarPanel();
-        overviewPanel = createOverviewPanel();
-        JPanel oknaPanel = createWindowsPanel();
         
         tabbedPane.addTab("Kalendarz", kalendarzPanel);
         tabbedPane.addTab("Kontakty", kontaktyPanel);
         tabbedPane.addTab("Zdarzenia", zdarzeniaPanel);
-        tabbedPane.addTab("Przegląd", overviewPanel);
-        tabbedPane.addTab("Okna", oknaPanel);
         
         mainPanel.add(tabbedPane, BorderLayout.CENTER);
         
@@ -167,7 +110,7 @@ public class CalendarGUI extends JFrame {
         JPanel actionPanel = createActionPanel();
         mainPanel.add(actionPanel, BorderLayout.SOUTH);
         
-        add(mainPanel);
+        getContentPane().add(mainPanel);
         
         // Załaduj dane do tabel
         refreshData();
@@ -623,7 +566,7 @@ public class CalendarGUI extends JFrame {
     }
     
     private void addKontakt() {
-        JDialog dialog = new JDialog(this, "Dodaj Kontakt", true);
+        JDialog dialog = new JDialog((java.awt.Frame) null, "Dodaj Kontakt", true);
         dialog.setSize(400, 300);
         dialog.setLocationRelativeTo(this);
         
@@ -673,19 +616,19 @@ public class CalendarGUI extends JFrame {
         panel.add(okBtn);
         panel.add(cancelBtn);
         
-        dialog.add(panel);
+        dialog.getContentPane().add(panel);
         dialog.setVisible(true);
     }
     
     private void editKontakt() {
         int row = kontaktyTable.getSelectedRow();
         if (row < 0) {
-            JOptionPane.showMessageDialog(this, "Wybierz kontakt do edycji!", "Info", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(null, "Wybierz kontakt do edycji!", "Info", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
         
         Kontakt k = appMemory.kontakty.get(row);
-        JDialog dialog = new JDialog(this, "Edytuj Kontakt", true);
+        JDialog dialog = new JDialog((java.awt.Frame) null, "Edytuj Kontakt", true);
         dialog.setSize(400, 300);
         dialog.setLocationRelativeTo(this);
         
@@ -724,7 +667,7 @@ public class CalendarGUI extends JFrame {
         panel.add(okBtn);
         panel.add(cancelBtn);
         
-        dialog.add(panel);
+        dialog.getContentPane().add(panel);
         dialog.setVisible(true);
     }
     
@@ -744,27 +687,102 @@ public class CalendarGUI extends JFrame {
     }
     
     private void addZdarzenie() {
-        JDialog dialog = new JDialog(this, "Dodaj Zdarzenie", true);
-        dialog.setSize(400, 300);
+        JDialog dialog = new JDialog((java.awt.Frame) null, "Dodaj Zdarzenie", true);
+        dialog.setSize(600, 500);
         dialog.setLocationRelativeTo(this);
         
-        JPanel panel = new JPanel(new GridLayout(5, 2, 10, 10));
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        
+        // Panel z polami edycji
+        JPanel editPanel = new JPanel(new GridLayout(4, 2, 10, 10));
+        editPanel.setBorder(BorderFactory.createTitledBorder("Szczegóły zdarzenia"));
         
         JTextField tytulField = new JTextField();
         JTextField opisField = new JTextField();
         JTextField dataField = new JTextField("YYYY-MM-DD");
         JTextField linkField = new JTextField();
         
-        panel.add(new JLabel("Tytuł:"));
-        panel.add(tytulField);
-        panel.add(new JLabel("Opis:"));
-        panel.add(opisField);
-        panel.add(new JLabel("Data:"));
-        panel.add(dataField);
-        panel.add(new JLabel("Link:"));
-        panel.add(linkField);
+        editPanel.add(new JLabel("Tytuł:"));
+        editPanel.add(tytulField);
+        editPanel.add(new JLabel("Opis:"));
+        editPanel.add(opisField);
+        editPanel.add(new JLabel("Data:"));
+        editPanel.add(dataField);
+        editPanel.add(new JLabel("Link:"));
+        editPanel.add(linkField);
         
+        mainPanel.add(editPanel, BorderLayout.NORTH);
+        
+        // Panel z uczestnikami
+        JPanel participantsPanel = new JPanel(new BorderLayout(10, 10));
+        participantsPanel.setBorder(BorderFactory.createTitledBorder("Uczestnicy"));
+        
+        DefaultListModel<String> participantsModel = new DefaultListModel<>();
+        JList<String> participantsList = new JList<>(participantsModel);
+        participantsList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        
+        JScrollPane participantsScroll = new JScrollPane(participantsList);
+        participantsPanel.add(participantsScroll, BorderLayout.CENTER);
+        
+        // Przyciski do zarządzania uczestnikami
+        JPanel participantsButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JButton addParticipantBtn = new JButton("Dodaj uczestnika");
+        JButton removeParticipantBtn = new JButton("Usuń uczestnika");
+        
+        java.util.List<Kontakt> tempParticipants = new java.util.ArrayList<>();
+        
+        addParticipantBtn.addActionListener(onAction(() -> {
+            String[] contactNames = new String[appMemory.kontakty.size()];
+            for (int i = 0; i < appMemory.kontakty.size(); i++) {
+                Kontakt k = appMemory.kontakty.get(i);
+                contactNames[i] = k.getNazwisko() + " " + k.getImie();
+            }
+            
+            if (contactNames.length == 0) {
+                JOptionPane.showMessageDialog(null, "Brak kontaktów w bazie danych!", "Info", JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+            
+            String selected = (String) JOptionPane.showInputDialog(
+                dialog,
+                "Wybierz kontakt do dodania:",
+                "Dodaj uczestnika",
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                contactNames,
+                contactNames[0]
+            );
+            
+            if (selected != null) {
+                for (Kontakt k : appMemory.kontakty) {
+                    if ((k.getNazwisko() + " " + k.getImie()).equals(selected) && !tempParticipants.contains(k)) {
+                        tempParticipants.add(k);
+                        participantsModel.addElement(selected);
+                        break;
+                    }
+                }
+            }
+        }));
+        
+        removeParticipantBtn.addActionListener(onAction(() -> {
+            int idx = participantsList.getSelectedIndex();
+            if (idx < 0) {
+                JOptionPane.showMessageDialog(null, "Wybierz uczestnika do usunięcia!", "Info", JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+            tempParticipants.remove(idx);
+            participantsModel.remove(idx);
+        }));
+        
+        participantsButtonPanel.add(addParticipantBtn);
+        participantsButtonPanel.add(removeParticipantBtn);
+        participantsPanel.add(participantsButtonPanel, BorderLayout.SOUTH);
+        
+        mainPanel.add(participantsPanel, BorderLayout.CENTER);
+        
+        // Przyciski OK/Anuluj na dole
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         JButton okBtn = new JButton("OK");
         JButton cancelBtn = new JButton("Anuluj");
         
@@ -776,21 +794,25 @@ public class CalendarGUI extends JFrame {
                     LocalDate.parse(dataField.getText()),
                     java.net.URI.create(linkField.getText()).toURL()
                 );
+                for (Kontakt k : tempParticipants) {
+                    z.dodajKontakt(k);
+                }
                 appMemory.zdarzenia.add(z);
                 refreshData();
                 dialog.dispose();
-                JOptionPane.showMessageDialog(this, "Zdarzenie dodane pomyślnie!");
+                JOptionPane.showMessageDialog(null, "Zdarzenie dodane pomyślnie!");
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Błąd: " + ex.getMessage(), "Błąd", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(null, "Błąd: " + ex.getMessage(), "Błąd", JOptionPane.ERROR_MESSAGE);
             }
         }));
         
         cancelBtn.addActionListener(onAction(dialog::dispose));
         
-        panel.add(okBtn);
-        panel.add(cancelBtn);
+        buttonPanel.add(okBtn);
+        buttonPanel.add(cancelBtn);
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
         
-        dialog.add(panel);
+        dialog.getContentPane().add(mainPanel);
         dialog.setVisible(true);
     }
     
@@ -802,27 +824,107 @@ public class CalendarGUI extends JFrame {
         }
         
         Zdarzenie z = appMemory.zdarzenia.get(row);
-        JDialog dialog = new JDialog(this, "Edytuj Zdarzenie", true);
-        dialog.setSize(400, 300);
+        JDialog dialog = new JDialog((java.awt.Frame) null, "Edytuj Zdarzenie", true);
+        dialog.setSize(600, 500);
         dialog.setLocationRelativeTo(this);
         
-        JPanel panel = new JPanel(new GridLayout(5, 2, 10, 10));
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        
+        // Panel z polami edycji
+        JPanel editPanel = new JPanel(new GridLayout(4, 2, 10, 10));
+        editPanel.setBorder(BorderFactory.createTitledBorder("Szczegóły zdarzenia"));
         
         JTextField tytulField = new JTextField(z.getTytul());
         JTextField opisField = new JTextField(z.getOpis());
         JTextField dataField = new JTextField(z.getData().toString());
         JTextField linkField = new JTextField(z.getMiejsce() != null ? z.getMiejsce().toString() : "");
         
-        panel.add(new JLabel("Tytuł:"));
-        panel.add(tytulField);
-        panel.add(new JLabel("Opis:"));
-        panel.add(opisField);
-        panel.add(new JLabel("Data:"));
-        panel.add(dataField);
-        panel.add(new JLabel("Link:"));
-        panel.add(linkField);
+        editPanel.add(new JLabel("Tytuł:"));
+        editPanel.add(tytulField);
+        editPanel.add(new JLabel("Opis:"));
+        editPanel.add(opisField);
+        editPanel.add(new JLabel("Data:"));
+        editPanel.add(dataField);
+        editPanel.add(new JLabel("Link:"));
+        editPanel.add(linkField);
         
+        mainPanel.add(editPanel, BorderLayout.NORTH);
+        
+        // Panel z uczestnikami
+        JPanel participantsPanel = new JPanel(new BorderLayout(10, 10));
+        participantsPanel.setBorder(BorderFactory.createTitledBorder("Uczestnicy"));
+        
+        DefaultListModel<String> participantsModel = new DefaultListModel<>();
+        for (Kontakt k : z.getKontakty()) {
+            participantsModel.addElement(k.getNazwisko() + " " + k.getImie());
+        }
+        JList<String> participantsList = new JList<>(participantsModel);
+        participantsList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        
+        JScrollPane participantsScroll = new JScrollPane(participantsList);
+        participantsPanel.add(participantsScroll, BorderLayout.CENTER);
+        
+        // Przyciski do zarządzania uczestnikami
+        JPanel participantsButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JButton addParticipantBtn = new JButton("Dodaj uczestnika");
+        JButton removeParticipantBtn = new JButton("Usuń uczestnika");
+        
+        addParticipantBtn.addActionListener(onAction(() -> {
+            String[] contactNames = new String[appMemory.kontakty.size()];
+            for (int i = 0; i < appMemory.kontakty.size(); i++) {
+                Kontakt k = appMemory.kontakty.get(i);
+                contactNames[i] = k.getNazwisko() + " " + k.getImie();
+            }
+            
+            if (contactNames.length == 0) {
+                JOptionPane.showMessageDialog(null, "Brak kontaktów w bazie danych!", "Info", JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+            
+            String selected = (String) JOptionPane.showInputDialog(
+                dialog,
+                "Wybierz kontakt do dodania:",
+                "Dodaj uczestnika",
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                contactNames,
+                contactNames[0]
+            );
+            
+            if (selected != null) {
+                for (Kontakt k : appMemory.kontakty) {
+                    if ((k.getNazwisko() + " " + k.getImie()).equals(selected)) {
+                        z.dodajKontakt(k);
+                        participantsModel.clear();
+                        for (Kontakt participant : z.getKontakty()) {
+                            participantsModel.addElement(participant.getNazwisko() + " " + participant.getImie());
+                        }
+                        break;
+                    }
+                }
+            }
+        }));
+        
+        removeParticipantBtn.addActionListener(onAction(() -> {
+            int idx = participantsList.getSelectedIndex();
+            if (idx < 0) {
+                JOptionPane.showMessageDialog(null, "Wybierz uczestnika do usunięcia!", "Info", JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+            Kontakt k = z.getKontakty().get(idx);
+            z.usunKontakt(k);
+            participantsModel.remove(idx);
+        }));
+        
+        participantsButtonPanel.add(addParticipantBtn);
+        participantsButtonPanel.add(removeParticipantBtn);
+        participantsPanel.add(participantsButtonPanel, BorderLayout.SOUTH);
+        
+        mainPanel.add(participantsPanel, BorderLayout.CENTER);
+        
+        // Przyciski OK/Anuluj na dole
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         JButton okBtn = new JButton("OK");
         JButton cancelBtn = new JButton("Anuluj");
         
@@ -834,18 +936,19 @@ public class CalendarGUI extends JFrame {
                 z.setMiejsce(java.net.URI.create(linkField.getText()).toURL());
                 refreshData();
                 dialog.dispose();
-                JOptionPane.showMessageDialog(this, "Zdarzenie zaktualizowane!");
+                JOptionPane.showMessageDialog(null, "Zdarzenie zaktualizowane!");
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Błąd: " + ex.getMessage(), "Błąd", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(null, "Błąd: " + ex.getMessage(), "Błąd", JOptionPane.ERROR_MESSAGE);
             }
         }));
         
         cancelBtn.addActionListener(onAction(dialog::dispose));
         
-        panel.add(okBtn);
-        panel.add(cancelBtn);
+        buttonPanel.add(okBtn);
+        buttonPanel.add(cancelBtn);
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
         
-        dialog.add(panel);
+        dialog.getContentPane().add(mainPanel);
         dialog.setVisible(true);
     }
     
@@ -869,7 +972,7 @@ public class CalendarGUI extends JFrame {
         JDialog dlg = new JDialog(this, "Zapisywanie...", false);
         JProgressBar pb = new JProgressBar();
         pb.setIndeterminate(true);
-        dlg.add(pb);
+        dlg.getContentPane().add(pb);
         dlg.setSize(300, 80);
         dlg.setLocationRelativeTo(this);
         dlg.setVisible(true);
@@ -1005,7 +1108,7 @@ public class CalendarGUI extends JFrame {
         JDialog dialog = new JDialog(this, "Relacje: Kontakt ↔ Zdarzenie", true);
         dialog.setSize(600, 400);
         dialog.setLocationRelativeTo(this);
-        dialog.add(panel);
+        dialog.getContentPane().add(panel);
 
         addBtn.addActionListener(onAction(() -> {
             int idx = allEventsList.getSelectedIndex();
@@ -1075,7 +1178,7 @@ public class CalendarGUI extends JFrame {
         JDialog dialog = new JDialog(this, "Relacje: Zdarzenie ↔ Kontakty", true);
         dialog.setSize(600, 400);
         dialog.setLocationRelativeTo(this);
-        dialog.add(panel);
+        dialog.getContentPane().add(panel);
 
         addBtn.addActionListener(onAction(() -> {
             int idx = allKontaktyList.getSelectedIndex();
@@ -1181,7 +1284,7 @@ public class CalendarGUI extends JFrame {
         JDialog dialog = new JDialog(this, "Zdarzenia dnia", true);
         dialog.setSize(600, 400);
         dialog.setLocationRelativeTo(this);
-        dialog.add(content);
+        dialog.getContentPane().add(content);
 
         addBtn.addActionListener(onAction(() -> {
             addZdarzenieForDate(date);
@@ -1272,7 +1375,7 @@ public class CalendarGUI extends JFrame {
         cancelBtn.addActionListener(onAction(dialog::dispose));
         panel.add(okBtn);
         panel.add(cancelBtn);
-        dialog.add(panel);
+        dialog.getContentPane().add(panel);
         dialog.setVisible(true);
     }
 
@@ -1318,7 +1421,7 @@ public class CalendarGUI extends JFrame {
         cancelBtn.addActionListener(onAction(dialog::dispose));
         panel.add(okBtn);
         panel.add(cancelBtn);
-        dialog.add(panel);
+        dialog.getContentPane().add(panel);
         dialog.setVisible(true);
     }
 }
